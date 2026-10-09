@@ -1,0 +1,106 @@
+{
+"skeleton": { "hash": "IwqKmpMOzCABTxk+fGIkagPWqP8", "spine": "2.1.27", "width": 0, "height": 0, "images": "" },
+"bones": [
+	{ "name": "root" },
+	{ "name": "TX", "parent": "root", "color": "9b0005ff" },
+	{ "name": "skill1", "parent": "TX", "y": -100, "color": "9b0005ff" },
+	{ "name": "TX_ljf_00000", "parent": "skill1" }
+],
+"slots": [
+	{ "name": "TX_ljf_00000", "bone": "TX_ljf_00000" }
+],
+"skins": {
+	"default": {
+		"TX_ljf_00000": {
+			"TX_ljf_00000": { "x": -2.99, "y": 92, "width": 206, "height": 161 },
+			"TX_ljf_00002": { "x": -2.99, "y": 92, "width": 206, "height": 161 },
+			"TX_ljf_00004": { "x": -2.99, "y": 92, "width": 206, "height": 161 },
+			"TX_ljf_00006": { "x": -2.99, "y": 92, "width": 206, "height": 161 },
+			"TX_ljf_00008": { "x": -2.99, "y": 92, "width": 206, "height": 161 },
+			"TX_ljf_00010": { "x": -2.99, "y": 92, "width": 206, "height": 161 }
+		}
+	}
+},
+"events": {
+	"event_hit": {}
+},
+"animations": {
+	"animation": {
+		"slots": {
+			"TX_ljf_00000": {
+				"attachment": [
+					{ "time": 0, "name": "TX_ljf_00000" },
+					{ "time": 0.0333, "name": "TX_ljf_00002" },
+					{ "time": 0.0666, "name": "TX_ljf_00004" },
+					{ "time": 0.1, "name": "TX_ljf_00006" },
+					{ "time": 0.1333, "name": "TX_ljf_00008" },
+					{ "time": 0.1666, "name": "TX_ljf_00010" }
+				],
+				"color": [
+					{ "time": 0, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.1666, "color": "ffffffff" }
+				]
+			}
+		},
+		"bones": {
+			"root": {
+				"rotate": [
+					{ "time": 0, "angle": 0 }
+				],
+				"translate": [
+					{ "time": 0, "x": 0, "y": 0 }
+				],
+				"scale": [
+					{ "time": 0, "x": 1, "y": 1 }
+				]
+			},
+			"TX_ljf_00000": {
+				"rotate": [
+					{ "time": 0, "angle": 0, "curve": "stepped" },
+					{ "time": 0.1666, "angle": 0 }
+				],
+				"translate": [
+					{ "time": 0, "x": 0, "y": 100, "curve": "stepped" },
+					{ "time": 0.1666, "x": 0, "y": 100 }
+				],
+				"scale": [
+					{ "time": 0, "x": 2.715, "y": 2.72, "curve": "stepped" },
+					{ "time": 0.1666, "x": 2.715, "y": 2.72 }
+				]
+			},
+			"TX": {
+				"rotate": [
+					{ "time": 0, "angle": 0, "curve": "stepped" },
+					{ "time": 0.1666, "angle": 0 }
+				],
+				"translate": [
+					{ "time": 0, "x": 0, "y": 0, "curve": "stepped" },
+					{ "time": 0.1666, "x": 0, "y": 0 }
+				],
+				"scale": [
+					{ "time": 0, "x": 1, "y": 1, "curve": "stepped" },
+					{ "time": 0.1666, "x": 1, "y": 1 }
+				]
+			},
+			"skill1": {
+				"rotate": [
+					{ "time": 0, "angle": 0, "curve": "stepped" },
+					{ "time": 0.1666, "angle": 0 }
+				],
+				"translate": [
+					{ "time": 0, "x": 0, "y": -85.02, "curve": "stepped" },
+					{ "time": 0.1666, "x": 0, "y": -85.02 }
+				],
+				"scale": [
+					{ "time": 0, "x": 1, "y": 1, "curve": "stepped" },
+					{ "time": 0.1666, "x": 1, "y": 1 }
+				]
+			}
+		},
+		"drawOrder": [
+			{ "time": 0 },
+			{ "time": 0.1666 }
+		]
+	}
+}
+}

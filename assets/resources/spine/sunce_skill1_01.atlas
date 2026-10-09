@@ -1,0 +1,48 @@
+
+sunce_skill1_01.png
+size: 977,195
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+TX_ljf_00000
+  rotate: true
+  xy: 693, 2
+  size: 191, 141
+  orig: 206, 161
+  offset: 6, 10
+  index: -1
+TX_ljf_00002
+  rotate: true
+  xy: 351, 2
+  size: 191, 146
+  orig: 206, 161
+  offset: 7, 6
+  index: -1
+TX_ljf_00004
+  rotate: true
+  xy: 198, 6
+  size: 187, 151
+  orig: 206, 161
+  offset: 11, 1
+  index: -1
+TX_ljf_00006
+  rotate: false
+  xy: 2, 44
+  size: 194, 149
+  orig: 206, 161
+  offset: 6, 3
+  index: -1
+TX_ljf_00008
+  rotate: false
+  xy: 499, 50
+  size: 192, 143
+  orig: 206, 161
+  offset: 6, 7
+  index: -1
+TX_ljf_00010
+  rotate: true
+  xy: 836, 2
+  size: 191, 139
+  orig: 206, 161
+  offset: 7, 7
+  index: -1
