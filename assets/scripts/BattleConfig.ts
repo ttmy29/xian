@@ -1,4 +1,4 @@
-/** 战斗数值集中在这里，后续替换美术或添加技能物品时只改配置。 */
+/** 战斗数值集中在这里，按通用系统和各个技能分组。 */
 export interface SkillTargetConfig {
     id: string;
     x: number;
@@ -10,91 +10,123 @@ export interface SkillTargetConfig {
 export const BATTLE_CONFIG = {
     guide: {
         firstMonsterTemplate: '1', // 开场引导使用 monsterRoot 下的模板名
-        firstMonsterX: 0,           // 开场怪物的横坐标，可调整
-        firstMonsterY: -360,        // 开场怪物的纵坐标，可调整
-        pointerOffsetX: 14,        // yindao 相对怪物锚点的横向偏移
-        pointerOffsetY: 2,         // yindao 相对怪物锚点的纵向偏移
-        shadeAlpha: 150,          // 黑色引导遮罩透明度（0～255）
-        spotlightRadius: 95,      // 怪物周围不受阴影覆盖的圆形半径
-        spotlightOffsetY: 38,     // 怪物锚点到圆心的纵向偏移
-        spotlightAlpha: 170,     // 圆形亮区的白色底色透明度
+        firstMonsterX: 0,
+        firstMonsterY: -360,
+        pointerOffsetX: 14,
+        pointerOffsetY: 2,
+        shadeAlpha: 150,
+        spotlightRadius: 95,
+        spotlightOffsetY: 38,
+        spotlightAlpha: 170,
     },
-    tapCooldown: 0.5,       // 两次点击发射之间的最短间隔（秒）
-    tripleShotCount: 3,     // 解锁后的每次发射数量
-    tripleShotDamage: 25,   // 击破 1 后普通飞剑和 knife1 的伤害
-    knife3Damage: 30,      // 击破 4 后点击发射的 knife3 伤害
-    leiInterval: 5,        // 击破 3 后雷击释放间隔（秒）
-    leiTargetCount: 3,     // 每轮命中不同怪物的最多数量
-    leiDamage: 150,        // 每道雷的伤害
-    fengSpeed: 320,        // 龙卷风直线前进速度（设计像素/秒）
-    fengDuration: 3,       // 龙卷风持续时间（秒）
-    fengInterval: 5,       // 获得龙卷风后再次释放的间隔（秒）
-    fengDamage: 200,       // 龙卷风经过每只怪物时的伤害
-    fengHitRadius: 75,     // 龙卷风与怪物的碰撞半径（设计像素）
-    warnHoldDuration: 2,  // 击破 5 后警告文字保持显示的时间（秒）
-    warnFadeDuration: 0.5, // 警告文字淡出的时间（秒）
-    skillTarget4MaxHp: 300, // 场景文件中的 targetRoot/4 没有血量标签时使用
-    orbitKnifeCount: 18,   // 击破 2 后环绕飞剑的数量
-    orbitKnifeSpawnSpacing: 0.1, // 每把 knife2 生成的间隔（秒）
-    orbitKnifeRadius: 180, // knife2 围绕角色的半径（设计像素）
-    orbitKnifeCenterOffsetY: 50, // 环绕圆心相对角色向上偏移（设计像素）
-    orbitKnifeAngularSpeed: 180, // knife2 每秒旋转角度
-    orbitKnifeDamage: 25,  // knife2 每次命中的伤害
-    orbitKnifeHitInterval: 0.5, // 同一目标连续受 knife2 伤害的最短间隔（秒）
-    orbitKnifeHitWidth: 12, // knife2 刀身碰撞的半宽（设计像素）
-    radialKnifeCount: 18,   // 万剑决一次向四周发出的飞剑数量
-    radialKnifeInterval: 4, // 获得万剑决后，每隔多少秒释放一轮飞剑
-    radialBurstCount: 2,   // 每轮连续释放多少次 18 支飞剑
-    radialBurstSpacing: 0.4, // 同一轮两次齐射的间隔（秒）
-    upgradeEffectDelay: 1, // 击破技能物品后，角色身上显示升级特效的延迟
-    knifeVolleySpacing: 24, // 同一轮多把飞剑的出手横向间距
-    knifeVolleyCenterCurveSide: 0.7, // 三把飞剑中间一把的出手弯曲幅度
-    knifeRandomInitialAngle: true,  // 每把飞剑随机取 0～360°；false 则沿用 knife 模板角度
-    knifeSpeed: 1250,       // 追击阶段最高速度（设计像素/秒）
-    knifeStartSpeedRatio: 0.55, // 飞剑刚出手时占最高速度的比例
-    knifeAcceleration: 1900,   // 飞剑加速度（设计像素/秒²）
-    knifeLaunchDistance: 75,       // 沿初始朝向飞出的最大距离（设计像素）
-    knifeLaunchTargetRatio: 0.3,   // 近目标时缩短第一段，避免先飞过怪物
-    knifeLaunchBendAngle: 12,      // 第一段朝转弯侧缓慢弯曲的角度
-    knifeTurnSpeed: 700,           // 出手与转弯阶段的速度；改这里最能影响前半段快慢
-    knifeTurnMaxRate: 420,         // 第二段每秒最大转角；随速度同步提高以保留弧线半径
-    knifeTurnAngularAcceleration: 2300, // 每秒转向速度的变化上限，保证三段连接平滑
-    knifeTurnMinDistance: 140,     // 转弯幅度较大时，第二段至少保留的路径长度
-    knifeTurnExitAngle: 7,        // 与目标方向误差小于此角度才允许进入追击
-    knifeTurnExitAngularSpeed: 35, // 转向基本停稳后才进入追击（度/秒）
-    knifeChaseTurnRate: 300,      // 追击阶段最多每秒调整的朝向角度
-    knifeTerminalCaptureDistance: 300, // 接近目标后接入命中弧线的距离；避免高速飞剑绕怪转圈
-    knifeFlightStepDistance: 8,   // 飞行、命中和白线采样的最大间距（设计像素）
-    knifeFlightEdgePadding: 40,   // 飞剑起飞时距画面边缘的留白
-    knifeTurnScreenReserve: 150,  // 第一段为后续转弯预留的画面空间
-    knifeLifetime: 3.5,       // 飞剑最长存在时间（秒），给反向起飞后的回转留出时间
-    knifeTrailLength: 400,   // 白色轨迹沿飞行路径保留的最大长度（设计像素）
-    knifeTrailFadeDuration: 0.2, // 飞剑消失后轨迹淡出的时间（秒）
-    knifeTrailWidth: 5,       // 白色主线最宽处的宽度（设计像素）
-    knifeHitRadius: 15,     // 飞剑靠近目标多近时算命中
-    damageTextOffsetY: 50, // 伤害文字出生点高于怪物锚点的距离
-    damageTextRise: 80,    // 伤害文字向上飘动的距离
-    damageTextDuration: 0.7, // 飘动及淡出的时间（秒）
-    skillTargetHitScale: 1.1, // 地图物品受击时的短暂放大倍率
-    skillTargetHitPunchDuration: 0.07, // 地图物品放大的时间（秒）
-    skillTargetHitRecoverDuration: 0.14, // 地图物品恢复原样的时间（秒）
-    icon1BaseDamage: 10,    // icon1 Lv.1 每把飞剑的伤害
-    icon1DamagePerLevel: 5, // icon1 每升一级增加的伤害
-    playerMaxHp: 100,
+    player: {
+        maxHp: 100,
+    },
+    knife: {
+        tapCooldown: 0.5,
+        icon1BaseDamage: 10,
+        icon1DamagePerLevel: 5,
+        knifeRandomInitialAngle: true,
+        knifeSpeed: 1250,
+        knifeStartSpeedRatio: 0.55,
+        knifeAcceleration: 1900,
+        knifeLaunchDistance: 75,
+        knifeLaunchTargetRatio: 0.3,
+        knifeLaunchBendAngle: 12,
+        knifeTurnSpeed: 700,
+        knifeTurnMaxRate: 420,
+        knifeTurnAngularAcceleration: 2300,
+        knifeTurnMinDistance: 140,
+        knifeTurnExitAngle: 7,
+        knifeTurnExitAngularSpeed: 35,
+        knifeChaseTurnRate: 300,
+        knifeTerminalCaptureDistance: 300,
+        knifeFlightStepDistance: 8,
+        knifeFlightEdgePadding: 40,
+        knifeTurnScreenReserve: 150,
+        knifeLifetime: 3.5,
+        knifeTrailLength: 400,
+        knifeTrailFadeDuration: 0.2,
+        knifeTrailWidth: 5,
+        knifeHitRadius: 15,
+    },
+    skill1: { // 击破 targetRoot/1：三连击
+        tripleShotCount: 3, // 每次点击发射的飞剑数量
+        tripleShotDamage: 25, // 普通飞剑和 knife1 的伤害
+        knifeVolleySpacing: 24, // 同一轮飞剑的出手间距
+        knifeVolleyCenterCurveSide: 0.7, // 中间一把飞剑的弯曲幅度
+    },
+    skill2: { // 击破 targetRoot/2：环绕飞剑
+        orbitKnifeCount: 18, // 总数量
+        orbitKnifeSpawnSpacing: 0.1, // 每把生成间隔（秒）
+        orbitKnifeRadius: 180, // 环绕半径
+        orbitKnifeCenterOffsetY: 50, // 环绕圆心相对角色的纵向偏移
+        orbitKnifeAngularSpeed: 180, // 每秒旋转角度
+        orbitKnifeDamage: 25, // 每次命中伤害
+        orbitKnifeHitInterval: 0.5, // 同一目标重复受击间隔（秒）
+        orbitKnifeHitWidth: 12, // 刀身碰撞半宽
+    },
+    skill3: { // 击破 targetRoot/3：破盾动画、雷击、警告、怪潮
+        breakRadius: 300, // 3PD2 开始播放时，以角色为圆心的伤害半径
+        breakDamage: 200, // 范围内每只怪物受到一次伤害
+        leiInterval: 5, // 雷击释放间隔（秒）
+        leiTargetCount: 5, // 每轮最多命中多少只不同怪物
+        leiDamage: 150, // 每道雷击伤害
+        warnHoldDuration: 2, // 警告显示时长（秒）
+        warnFadeDuration: 0.5, // 警告淡出时长（秒）
+        monsterSpeed: 80, // 动画结束后的怪物移动速度
+        monsterSpawnInterval: 0.2, // 动画结束后的刷怪间隔（秒）
+    },
+    skill4: { // 击破 targetRoot/4：赤焰飞剑
+        skillTarget4MaxHp: 300, // 场景未配置血量标签时使用
+        knife3Damage: 30, // 点击发射的 knife3 伤害
+    },
+    skill5: { // 击破 targetRoot/5：龙卷风
+        fengSpeed: 320, // 龙卷风前进速度
+        fengDuration: 3, // 持续时间（秒）
+        fengInterval: 5, // 再次释放的间隔（秒）
+        fengDamage: 200, // 碰到怪物的伤害
+        fengHitRadius: 75, // 碰撞半径
+    },
+    skill6: { // 击破 targetRoot/6：万剑决
+        radialKnifeCount: 18, // 每次齐射的飞剑数量
+        radialKnifeInterval: 4, // 每轮释放间隔（秒）
+        radialBurstCount: 2, // 每轮齐射次数
+        radialBurstSpacing: 0.4, // 两次齐射的间隔（秒）
+    },
+    skillTarget: {
+        upgradeEffectDelay: 1,
+        skillTargetHitScale: 1.1,
+        skillTargetHitPunchDuration: 0.07,
+        skillTargetHitRecoverDuration: 0.14,
+        // 后续逐个配置地图物品的血量、位置和奖励；不自动生成。
+        extraTargets: [] as SkillTargetConfig[],
+    },
+    damageText: {
+        offsetY: 50,
+        rise: 80,
+        duration: 0.7,
+    },
+    monsterDrop: {
+        diao1Chance: 35,
+        diao2Chance: 15,
+        diao3Chance: 15,
+        diao4Chance: 15,
+        noDropChance: 20,
+        collectDelay: 0,
+        flyDuration: 0.1,
+    },
     monster: {
-        maxHp: 10,//10
-        speed: 65,
-        speedAfterTarget5: 100, // 击破 targetRoot/5 后的怪物速度
-        radius: 8,
-        spawnInterval: 1.0,  // 每波生成间隔（秒）；增大此值会减少生成速度
-        spawnIntervalAfterTarget5: 0.5, // 击破 targetRoot/5 后的刷怪间隔（秒）
-        perWave: 3,          // 每波生成数量
-        edgePadding: 20,     // 怪物外观距画面边缘的留白；调小会更贴边
-        spawnSpacing: 80,    // 新怪物与其他怪物出生点的期望间距
-        maxAlive: 30,        // 场上同时存在的怪物上限
-        contactDamage: 10,
-        rewardSkillId: 'monster_skill',
+        maxHp: 10, // 怪物初始血量
+        speed: 55, // 怪物默认移动速度（像素/秒）
+        radius: 8, // 怪物碰撞半径（像素）
+        spawnInterval: 1.0, // 目标 1、6 均击破且目标 3 未击破时的刷怪间隔（秒）
+        earlySpawnInterval: 2.0, // 目标 1 或 6 尚未击破时的刷怪间隔（秒）
+        perWave: 3, // 每波计划生成的怪物数量
+        edgePadding: 20, // 怪物出生点距画面边缘的留白（像素）
+        spawnSpacing: 80, // 同波怪物出生点之间的期望间距（像素）
+        maxAlive: 30, // 场上同时存活的怪物数量上限
+        contactDamage: 10, // 怪物碰到角色时造成的伤害
+        rewardSkillId: 'monster_skill', // 怪物掉落物收集后记录的技能标识
     },
-    // 后续逐个配置地图物品的血量、位置和奖励；75 血只是示例，不自动生成。
-    skillTargets: [] as SkillTargetConfig[],
 };

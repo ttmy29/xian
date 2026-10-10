@@ -1,77 +1,81 @@
 import { Color, Graphics, Node, UITransform, Vec3 } from 'cc';
 import { BATTLE_CONFIG } from './BattleConfig';
 
-interface TrailPoint {
-    x: number;
-    y: number;
-}
+interface TrailPoint { x: number; y: number }
 
-/** 在独立的画面特效层记录飞剑真实轨迹，按飞剑类型画白色或红色轨迹。 */
+/** 所有飞剑共用两层 Graphics，避免每条轨迹都产生绘制节点。 */
 export class KnifeTrail {
-    private readonly node: Node;
-    private readonly graphics: Graphics;
-    private readonly rootTransform: UITransform;
     private readonly points: TrailPoint[] = [];
     private finished = false;
     private cancelled = false;
     private fadeTime = 0;
-    private readonly color: 'white' | 'red';
+    private readonly rootTransform: UITransform;
+    private static readonly renderers = new WeakMap<Node, { white: Graphics; red: Graphics }>();
+    private static readonly whiteGlow = new Color(210, 235, 255);
+    private static readonly whiteCore = new Color(255, 255, 255);
+    private static readonly redGlow = new Color(255, 95, 65);
+    private static readonly redCore = new Color(255, 35, 35);
 
-    constructor(effectRoot: Node, startWorldPosition: Readonly<Vec3>, color: 'white' | 'red' = 'white') {
-        this.color = color;
+    constructor(effectRoot: Node, startWorldPosition: Readonly<Vec3>,
+        private readonly color: 'white' | 'red' = 'white') {
         this.rootTransform = effectRoot.getComponent(UITransform)!;
-        this.node = new Node('knifeTrail');
-        this.node.layer = effectRoot.layer;
-        this.node.parent = effectRoot;
-        this.node.addComponent(UITransform).setContentSize(this.rootTransform.contentSize);
-        this.graphics = this.node.addComponent(Graphics);
-        this.graphics.lineCap = Graphics.LineCap.ROUND;
         this.addPoint(startWorldPosition);
     }
 
     public addPoint(worldPosition: Readonly<Vec3>): void {
-        if (this.finished) return;
+        if (this.finished || this.cancelled) return;
         const local = this.rootTransform.convertToNodeSpaceAR(worldPosition as Vec3);
         const last = this.points[this.points.length - 1];
-        if (last && Math.hypot(last.x - local.x, last.y - local.y) < 1) return;
+        // 飞行路径仍按真实位置记录，但相邻不足 6 像素的点不必单独描画。
+        if (last && Math.hypot(last.x - local.x, last.y - local.y) < 6) return;
         this.points.push({ x: local.x, y: local.y });
         this.trimToLength();
     }
 
-    public finish(): void {
-        this.finished = true;
-    }
+    public finish(): void { this.finished = true; }
 
-    /** 命中时立即清掉白线；Graphics 先清空，节点随后由引擎销毁。 */
     public clearNow(): void {
-        if (this.cancelled) return;
         this.cancelled = true;
-        this.graphics.clear();
         this.points.length = 0;
-        this.node.destroy();
     }
 
-    /** 返回 false 表示轨迹已完全消失，可以从更新列表移除。 */
+    /** 返回 false 表示轨迹已完全消失。 */
     public update(dt: number): boolean {
         if (this.cancelled) return false;
         if (this.finished) this.fadeTime += dt;
-        const fadeDuration = Math.max(0.01, BATTLE_CONFIG.knifeTrailFadeDuration);
-        if (this.finished && this.fadeTime >= fadeDuration) {
-            this.node.destroy();
-            return false;
+        return !this.finished || this.fadeTime < Math.max(0.01, BATTLE_CONFIG.knife.knifeTrailFadeDuration);
+    }
+
+    public static render(effectRoot: Node, trails: readonly KnifeTrail[]): void {
+        let renderer = this.renderers.get(effectRoot);
+        if (!renderer) {
+            const makeGraphics = (name: string): Graphics => {
+                const node = new Node(name);
+                node.layer = effectRoot.layer;
+                node.parent = effectRoot;
+                node.addComponent(UITransform).setContentSize(effectRoot.getComponent(UITransform)!.contentSize);
+                const graphics = node.addComponent(Graphics);
+                graphics.lineCap = Graphics.LineCap.ROUND;
+                return graphics;
+            };
+            renderer = { white: makeGraphics('knifeTrailsWhite'), red: makeGraphics('knifeTrailsRed') };
+            this.renderers.set(effectRoot, renderer);
         }
-        const fade = this.finished ? 1 - this.fadeTime / fadeDuration : 1;
-        this.graphics.clear();
-        // 先画柔光，再叠加清晰主线；两层都从剑尾到剑尖逐渐变亮。
-        const glow = this.color === 'red' ? new Color(255, 95, 65) : new Color(210, 235, 255);
-        const core = this.color === 'red' ? new Color(255, 35, 35) : new Color(255, 255, 255);
-        this.drawSegments(BATTLE_CONFIG.knifeTrailWidth * 2.8, 72, glow, fade);
-        this.drawSegments(BATTLE_CONFIG.knifeTrailWidth, 255, core, fade);
-        return true;
+        renderer.white.clear();
+        renderer.red.clear();
+        for (const trail of trails) {
+            const graphics = trail.color === 'red' ? renderer.red : renderer.white;
+            const fade = trail.finished
+                ? 1 - trail.fadeTime / Math.max(0.01, BATTLE_CONFIG.knife.knifeTrailFadeDuration) : 1;
+            trail.drawSegments(graphics, BATTLE_CONFIG.knife.knifeTrailWidth * 2.8, 72,
+                trail.color === 'red' ? this.redGlow : this.whiteGlow, fade);
+            trail.drawSegments(graphics, BATTLE_CONFIG.knife.knifeTrailWidth, 255,
+                trail.color === 'red' ? this.redCore : this.whiteCore, fade);
+        }
     }
 
     private trimToLength(): void {
-        let remaining = Math.max(0, BATTLE_CONFIG.knifeTrailLength);
+        let remaining = Math.max(0, BATTLE_CONFIG.knife.knifeTrailLength);
         for (let index = this.points.length - 1; index > 0; index--) {
             const tail = this.points[index - 1];
             const head = this.points[index];
@@ -88,20 +92,21 @@ export class KnifeTrail {
         }
     }
 
-    private drawSegments(maxWidth: number, maxAlpha: number, color: Color, fade: number): void {
-        const maxLength = Math.max(0.01, BATTLE_CONFIG.knifeTrailLength);
+    private drawSegments(graphics: Graphics, maxWidth: number, maxAlpha: number,
+        color: Color, fade: number): void {
+        const maxLength = Math.max(0.01, BATTLE_CONFIG.knife.knifeTrailLength);
         let distanceFromHead = 0;
         for (let index = this.points.length - 1; index > 0; index--) {
             const previous = this.points[index - 1];
             const current = this.points[index];
             const segment = Math.hypot(current.x - previous.x, current.y - previous.y);
             const strength = Math.max(0, 1 - (distanceFromHead + segment / 2) / maxLength) * fade;
-            this.graphics.lineWidth = Math.max(0.75, maxWidth * strength);
+            graphics.lineWidth = Math.max(0.75, maxWidth * strength);
             color.a = Math.round(maxAlpha * strength);
-            this.graphics.strokeColor = color;
-            this.graphics.moveTo(previous.x, previous.y);
-            this.graphics.lineTo(current.x, current.y);
-            this.graphics.stroke();
+            graphics.strokeColor = color;
+            graphics.moveTo(previous.x, previous.y);
+            graphics.lineTo(current.x, current.y);
+            graphics.stroke();
             distanceFromHead += segment;
         }
     }

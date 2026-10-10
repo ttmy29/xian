@@ -1,0 +1,62 @@
+
+liubiao_skill2_1.png
+size: 674,124
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+tx_10
+  rotate: false
+  xy: 652, 102
+  size: 20, 20
+  orig: 20, 20
+  offset: 0, 0
+  index: -1
+tx_11_0016
+  rotate: false
+  xy: 572, 2
+  size: 90, 45
+  orig: 95, 50
+  offset: 2, 3
+  index: -1
+tx_7_0001
+  rotate: true
+  xy: 437, 14
+  size: 108, 133
+  orig: 120, 160
+  offset: 5, 17
+  index: -1
+tx_7_0002
+  rotate: true
+  xy: 2, 9
+  size: 113, 144
+  orig: 120, 160
+  offset: 3, 1
+  index: -1
+tx_7_0003
+  rotate: true
+  xy: 148, 11
+  size: 111, 142
+  orig: 120, 160
+  offset: 4, 14
+  index: -1
+tx_7_0004
+  rotate: true
+  xy: 292, 12
+  size: 110, 143
+  orig: 120, 160
+  offset: 4, 13
+  index: -1
+tx_8
+  rotate: false
+  xy: 572, 49
+  size: 78, 73
+  orig: 80, 76
+  offset: 1, 1
+  index: -1
+tx_9
+  rotate: false
+  xy: 652, 81
+  size: 18, 19
+  orig: 20, 20
+  offset: 1, 0
+  index: -1

@@ -34,7 +34,7 @@ export class KnifeFlight {
     private turnTravelled = 0;
     private turnRequiredDistance = 0;
     private capture: CapturePath | null = null;
-    private speed = BATTLE_CONFIG.knifeSpeed * BATTLE_CONFIG.knifeStartSpeedRatio;
+    private speed = BATTLE_CONFIG.knife.knifeSpeed * BATTLE_CONFIG.knife.knifeStartSpeedRatio;
     private age = 0;
 
     constructor(from: Readonly<Vec3>, target: Readonly<Vec3>, initialAngleDegrees: number,
@@ -48,14 +48,14 @@ export class KnifeFlight {
         this.turnSide = Math.abs(Math.abs(difference) - Math.PI) < 0.08
             ? (curveSide < 0 ? -1 : 1)
             : (Math.sign(difference) || (curveSide < 0 ? -1 : 1));
-        const bend = BATTLE_CONFIG.knifeLaunchBendAngle * Math.min(1, Math.abs(curveSide));
+        const bend = BATTLE_CONFIG.knife.knifeLaunchBendAngle * Math.min(1, Math.abs(curveSide));
         this.launchHeading = this.heading + this.turnSide * bend * Math.PI / 180;
         const targetDistance = Math.hypot(target.x - from.x, target.y - from.y);
         const edgeDistance = this.distanceToEdge(from, canvasWidth, canvasHeight, viewportCenter);
         this.launchDistance = Math.max(0, Math.min(
-            BATTLE_CONFIG.knifeLaunchDistance,
-            targetDistance * BATTLE_CONFIG.knifeLaunchTargetRatio,
-            edgeDistance - BATTLE_CONFIG.knifeTurnScreenReserve,
+            BATTLE_CONFIG.knife.knifeLaunchDistance,
+            targetDistance * BATTLE_CONFIG.knife.knifeLaunchTargetRatio,
+            edgeDistance - BATTLE_CONFIG.knife.knifeTurnScreenReserve,
         ));
     }
 
@@ -87,7 +87,7 @@ export class KnifeFlight {
             return { position, angleDegrees: this.angleDegrees, path, hit: true, expired: false };
         }
         let remaining = Math.max(0, dt);
-        while (remaining > 0.000001 && this.age < BATTLE_CONFIG.knifeLifetime && path.length < 256) {
+        while (remaining > 0.000001 && this.age < BATTLE_CONFIG.knife.knifeLifetime && path.length < 256) {
             if (this.phase === 'launch' && this.launchTravelled >= this.launchDistance) {
                 this.enterTurn(position, target);
             }
@@ -97,17 +97,17 @@ export class KnifeFlight {
             }
             if (this.phase !== 'launch' && this.phase !== 'capture' &&
                 (this.phase === 'chase' || this.turnTravelled >= this.turnRequiredDistance) &&
-                distanceToTarget <= BATTLE_CONFIG.knifeTerminalCaptureDistance) {
+                distanceToTarget <= BATTLE_CONFIG.knife.knifeTerminalCaptureDistance) {
                 this.startCapture(position, target);
             }
             const stepTime = Math.min(remaining, 1 / 90,
-                BATTLE_CONFIG.knifeFlightStepDistance / Math.max(1, this.speed),
-                BATTLE_CONFIG.knifeLifetime - this.age);
+                BATTLE_CONFIG.knife.knifeFlightStepDistance / Math.max(1, this.speed),
+                BATTLE_CONFIG.knife.knifeLifetime - this.age);
             if (stepTime <= 0.000001) break;
             const desiredSpeed = this.phase === 'chase' || this.phase === 'capture'
-                ? BATTLE_CONFIG.knifeSpeed : BATTLE_CONFIG.knifeTurnSpeed;
+                ? BATTLE_CONFIG.knife.knifeSpeed : BATTLE_CONFIG.knife.knifeTurnSpeed;
             this.speed = this.moveToward(this.speed, desiredSpeed,
-                BATTLE_CONFIG.knifeAcceleration * stepTime);
+                BATTLE_CONFIG.knife.knifeAcceleration * stepTime);
             let next: Vec3;
             if (this.phase === 'capture' && this.capture) {
                 const capture = this.capture;
@@ -121,7 +121,7 @@ export class KnifeFlight {
                     ? this.launchHeading
                     : Math.atan2(target.y - position.y, target.x - position.x);
                 const maxTurnRate = this.phase === 'chase'
-                    ? BATTLE_CONFIG.knifeChaseTurnRate : BATTLE_CONFIG.knifeTurnMaxRate;
+                    ? BATTLE_CONFIG.knife.knifeChaseTurnRate : BATTLE_CONFIG.knife.knifeTurnMaxRate;
                 this.steer(desiredHeading, maxTurnRate, stepTime);
                 next = new Vec3(
                     position.x + Math.cos(this.heading) * this.speed * stepTime,
@@ -147,8 +147,8 @@ export class KnifeFlight {
                 const errorDegrees = Math.abs(this.wrapAngle(targetHeading - this.heading)) * 180 / Math.PI;
                 const angularSpeedDegrees = Math.abs(this.angularVelocity) * 180 / Math.PI;
                 if (this.turnTravelled >= this.turnRequiredDistance &&
-                    errorDegrees <= BATTLE_CONFIG.knifeTurnExitAngle &&
-                    angularSpeedDegrees <= BATTLE_CONFIG.knifeTurnExitAngularSpeed) {
+                    errorDegrees <= BATTLE_CONFIG.knife.knifeTurnExitAngle &&
+                    angularSpeedDegrees <= BATTLE_CONFIG.knife.knifeTurnExitAngularSpeed) {
                     this.phase = 'chase';
                 }
             } else if (this.phase === 'capture' && this.capture &&
@@ -158,7 +158,7 @@ export class KnifeFlight {
             }
         }
         return { position, angleDegrees: this.angleDegrees, path, hit: false,
-            expired: this.age >= BATTLE_CONFIG.knifeLifetime };
+            expired: this.age >= BATTLE_CONFIG.knife.knifeLifetime };
     }
 
     private enterTurn(position: Readonly<Vec3>, target: Readonly<Vec3>): void {
@@ -171,7 +171,7 @@ export class KnifeFlight {
 
     private minimumTurnDistance(errorRadians: number): number {
         // 已经正对目标时无需强迫飞剑绕圈；转角达到 45° 后使用完整最短距离。
-        return BATTLE_CONFIG.knifeTurnMinDistance *
+        return BATTLE_CONFIG.knife.knifeTurnMinDistance *
             Math.min(1, errorRadians / (Math.PI / 4));
     }
 
@@ -245,7 +245,7 @@ export class KnifeFlight {
         if (Math.abs(Math.abs(error) - Math.PI) < 0.08) {
             error = this.turnSide * Math.abs(error);
         }
-        const acceleration = BATTLE_CONFIG.knifeTurnAngularAcceleration * Math.PI / 180;
+        const acceleration = BATTLE_CONFIG.knife.knifeTurnAngularAcceleration * Math.PI / 180;
         const maxRate = maxRateDegrees * Math.PI / 180;
         const stoppingAngle = this.angularVelocity * this.angularVelocity / (2 * acceleration);
         const sameDirection = Math.sign(error) === Math.sign(this.angularVelocity);
@@ -258,8 +258,8 @@ export class KnifeFlight {
 
     private distanceToEdge(from: Readonly<Vec3>, width: number, height: number,
         center: Readonly<Vec3>): number {
-        const halfWidth = Math.max(0, width / 2 - BATTLE_CONFIG.knifeFlightEdgePadding);
-        const halfHeight = Math.max(0, height / 2 - BATTLE_CONFIG.knifeFlightEdgePadding);
+        const halfWidth = Math.max(0, width / 2 - BATTLE_CONFIG.knife.knifeFlightEdgePadding);
+        const halfHeight = Math.max(0, height / 2 - BATTLE_CONFIG.knife.knifeFlightEdgePadding);
         const x = Math.cos(this.heading);
         const y = Math.sin(this.heading);
         const xDistance = Math.abs(x) < 0.000001 ? Infinity

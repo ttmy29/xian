@@ -22,7 +22,7 @@ export const BACKPACK_CONFIG: {
     items: [
         { id: 'icon1', templateName: 'icon1', width: 1, height: 1 },
         //{ id: 'icon2', templateName: 'icon2', width: 1, height: 1 },
-        { id: 'icon3', templateName: 'icon3', width: 2, height: 1 },
-        { id: 'icon4', templateName: 'icon4', width: 1, height: 3 }, // 刷新时可替换第三个位置
+        { id: 'icon3', templateName: 'icon3', width: 1, height: 1 },//2,1
+       // { id: 'icon4', templateName: 'icon4', width: 1, height: 3 }, // 刷新时可替换第三个位置
     ],
 };

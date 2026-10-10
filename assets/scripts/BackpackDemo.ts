@@ -144,19 +144,21 @@ export class BackpackDemo extends Component {
 
     private createBatch(refill: boolean): void {
         const templates = this.templatesRoot!;
-        const smallTypes = BACKPACK_CONFIG.items.filter(def => def.width === 1 && def.height === 1);
-        const largeTypes = BACKPACK_CONFIG.items.filter(def => def.width !== 1 || def.height !== 1);
-        if (!smallTypes.length || !largeTypes.length) {
-            console.error('BackpackDemo: items 至少需要一个 1×1 物品和一个非 1×1 物品。');
+        const firstTypes = BACKPACK_CONFIG.items.filter(def =>
+            def.templateName === 'icon1' || def.templateName === 'icon2');
+        const thirdTypes = BACKPACK_CONFIG.items.filter(def =>
+            def.templateName === 'icon3' || def.templateName === 'icon4');
+        if (!firstTypes.length || !thirdTypes.length) {
+            console.error('BackpackDemo: items 需要配置 icon1/icon2 和 icon3/icon4 各至少一个。');
             return;
         }
         const pick = (pool: BackpackItemConfig[]): BackpackItemConfig =>
             pool[Math.floor(Math.random() * pool.length)];
         const definitions = refill
-            ? [pick(smallTypes), pick(smallTypes), pick(largeTypes)]
-            : [smallTypes[0], smallTypes[1] ?? smallTypes[0], largeTypes[0]];
+            ? [pick(firstTypes), pick(firstTypes), pick(thirdTypes)]
+            : [firstTypes[0], firstTypes[1] ?? firstTypes[0], thirdTypes[0]];
         definitions.forEach((def, index) => {
-            // 前两个固定使用各自槽位；第三个使用所选模板自身的位置。
+            // 前两个使用各自槽位；第三个使用 icon3/icon4 模板自身的位置。
             const slot = index < 2
                 ? this.smallTraySlots[index]
                 : templates.getChildByName(def.templateName)?.position;

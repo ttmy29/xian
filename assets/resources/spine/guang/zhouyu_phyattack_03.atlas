@@ -1,0 +1,69 @@
+
+zhouyu_phyattack_03.png
+size: 531,54
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ef/tx_baodian01
+  rotate: false
+  xy: 502, 12
+  size: 27, 40
+  orig: 50, 100
+  offset: 11, 0
+  index: -1
+ef/tx_baodian02
+  rotate: true
+  xy: 159, 7
+  size: 45, 74
+  orig: 50, 100
+  offset: 1, 1
+  index: -1
+ef/tx_baodian03
+  rotate: true
+  xy: 2, 3
+  size: 49, 80
+  orig: 50, 100
+  offset: 0, 10
+  index: -1
+ef/tx_baodian04
+  rotate: true
+  xy: 84, 2
+  size: 50, 73
+  orig: 50, 100
+  offset: 0, 23
+  index: -1
+ef/tx_baodian05
+  rotate: true
+  xy: 235, 4
+  size: 48, 67
+  orig: 50, 100
+  offset: 2, 33
+  index: -1
+ef/tx_baodian06
+  rotate: true
+  xy: 304, 2
+  size: 50, 57
+  orig: 50, 100
+  offset: 0, 43
+  index: -1
+ef/tx_baodian07
+  rotate: true
+  xy: 415, 2
+  size: 50, 45
+  orig: 50, 100
+  offset: 0, 55
+  index: -1
+ef/tx_baodian08
+  rotate: true
+  xy: 462, 5
+  size: 47, 38
+  orig: 50, 100
+  offset: 1, 62
+  index: -1
+ef/tx_guangdiand1
+  rotate: false
+  xy: 363, 2
+  size: 50, 50
+  orig: 50, 50
+  offset: 0, 0
+  index: -1

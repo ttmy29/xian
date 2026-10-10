@@ -1,0 +1,34 @@
+
+pangde_skill2.png
+size: 419,87
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+yixinghuanwei/guangtiao
+  rotate: true
+  xy: 2, 21
+  size: 7, 106
+  orig: 7, 106
+  offset: 0, 0
+  index: -1
+yixinghuanwei/guangzhu
+  rotate: true
+  xy: 256, 2
+  size: 83, 116
+  orig: 83, 116
+  offset: 0, 0
+  index: -1
+yixinghuanwei/qiangjian
+  rotate: false
+  xy: 374, 14
+  size: 43, 71
+  orig: 43, 71
+  offset: 0, 0
+  index: -1
+yixinghuanwei/quanshang
+  rotate: false
+  xy: 2, 30
+  size: 252, 55
+  orig: 252, 55
+  offset: 0, 0
+  index: -1

@@ -1,0 +1,167 @@
+
+piliche_skill3_1.png
+size: 417,268
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+tx_2_0001
+  rotate: false
+  xy: 374, 192
+  size: 31, 23
+  orig: 130, 112
+  offset: 49, 13
+  index: -1
+tx_2_0002
+  rotate: false
+  xy: 374, 192
+  size: 31, 23
+  orig: 130, 112
+  offset: 49, 13
+  index: -1
+tx_2_0003
+  rotate: true
+  xy: 374, 217
+  size: 49, 41
+  orig: 130, 112
+  offset: 50, 9
+  index: -1
+tx_2_0005
+  rotate: false
+  xy: 273, 190
+  size: 99, 76
+  orig: 130, 112
+  offset: 28, 6
+  index: -1
+tx_2_0007
+  rotate: true
+  xy: 2, 21
+  size: 114, 97
+  orig: 130, 112
+  offset: 15, 4
+  index: -1
+tx_2_0008
+  rotate: true
+  xy: 2, 21
+  size: 114, 97
+  orig: 130, 112
+  offset: 15, 4
+  index: -1
+tx_2_0009
+  rotate: true
+  xy: 99, 148
+  size: 118, 93
+  orig: 130, 112
+  offset: 11, 10
+  index: -1
+tx_2_0010
+  rotate: true
+  xy: 99, 148
+  size: 118, 93
+  orig: 130, 112
+  offset: 11, 10
+  index: -1
+tx_2_0011
+  rotate: true
+  xy: 2, 137
+  size: 129, 95
+  orig: 130, 112
+  offset: 0, 15
+  index: -1
+tx_2_0013
+  rotate: true
+  xy: 194, 161
+  size: 105, 77
+  orig: 130, 112
+  offset: 8, 18
+  index: -1
+tx_2_0015
+  rotate: true
+  xy: 101, 38
+  size: 108, 78
+  orig: 130, 112
+  offset: 6, 19
+  index: -1
+tx_2_0017
+  rotate: true
+  xy: 344, 10
+  size: 84, 51
+  orig: 130, 112
+  offset: 6, 48
+  index: -1
+tx_2_0018
+  rotate: true
+  xy: 344, 10
+  size: 84, 51
+  orig: 130, 112
+  offset: 6, 48
+  index: -1
+tx_2_0019
+  rotate: true
+  xy: 273, 96
+  size: 92, 74
+  orig: 130, 112
+  offset: 2, 28
+  index: -1
+tx_2_0021
+  rotate: true
+  xy: 181, 54
+  size: 92, 90
+  orig: 130, 112
+  offset: 1, 14
+  index: -1
+tx_2_0023
+  rotate: true
+  xy: 349, 116
+  size: 72, 53
+  orig: 130, 112
+  offset: 19, 11
+  index: -1
+tx_2_0024
+  rotate: true
+  xy: 349, 116
+  size: 72, 53
+  orig: 130, 112
+  offset: 19, 11
+  index: -1
+tx_2_0025
+  rotate: true
+  xy: 289, 6
+  size: 88, 53
+  orig: 130, 112
+  offset: 14, 15
+  index: -1
+tx_2_0026
+  rotate: true
+  xy: 289, 6
+  size: 88, 53
+  orig: 130, 112
+  offset: 14, 15
+  index: -1
+tx_2_0027
+  rotate: false
+  xy: 197, 6
+  size: 90, 46
+  orig: 130, 112
+  offset: 13, 16
+  index: -1
+tx_6_0001
+  rotate: false
+  xy: 88, 4
+  size: 44, 15
+  orig: 110, 21
+  offset: 1, 2
+  index: -1
+tx_6_0002
+  rotate: false
+  xy: 134, 15
+  size: 61, 21
+  orig: 110, 21
+  offset: 22, 0
+  index: -1
+tx_6_0003
+  rotate: false
+  xy: 2, 2
+  size: 84, 17
+  orig: 110, 21
+  offset: 26, 2
+  index: -1

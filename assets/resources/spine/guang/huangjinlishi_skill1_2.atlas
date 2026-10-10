@@ -1,0 +1,223 @@
+
+huangjinlishi_skill1_2.png
+size: 643,149
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+guanghuang0001
+  rotate: false
+  xy: 214, 99
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0002
+  rotate: false
+  xy: 214, 49
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0003
+  rotate: false
+  xy: 286, 99
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0004
+  rotate: false
+  xy: 430, 49
+  size: 69, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0005
+  rotate: false
+  xy: 286, 49
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0006
+  rotate: false
+  xy: 502, 99
+  size: 69, 48
+  orig: 70, 48
+  offset: 1, 0
+  index: -1
+guanghuang0007
+  rotate: false
+  xy: 358, 99
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0008
+  rotate: false
+  xy: 358, 49
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guanghuang0009
+  rotate: false
+  xy: 501, 49
+  size: 69, 48
+  orig: 70, 48
+  offset: 1, 0
+  index: -1
+guanghuang0010
+  rotate: false
+  xy: 430, 99
+  size: 70, 48
+  orig: 70, 48
+  offset: 0, 0
+  index: -1
+guangxian0001
+  rotate: false
+  xy: 564, 16
+  size: 6, 31
+  orig: 10, 150
+  offset: 2, 117
+  index: -1
+guangxian0002
+  rotate: true
+  xy: 207, 2
+  size: 6, 77
+  orig: 10, 150
+  offset: 2, 73
+  index: -1
+guangxian0003
+  rotate: true
+  xy: 399, 41
+  size: 6, 80
+  orig: 10, 150
+  offset: 2, 64
+  index: -1
+guangxian0004
+  rotate: true
+  xy: 111, 3
+  size: 6, 94
+  orig: 10, 150
+  offset: 2, 39
+  index: -1
+guangxian0005
+  rotate: true
+  xy: 2, 2
+  size: 7, 107
+  orig: 10, 150
+  offset: 2, 14
+  index: -1
+guangxian0006
+  rotate: true
+  xy: 214, 41
+  size: 6, 96
+  orig: 10, 150
+  offset: 2, 9
+  index: -1
+guangxian0007
+  rotate: true
+  xy: 312, 41
+  size: 6, 85
+  orig: 10, 150
+  offset: 2, 5
+  index: -1
+guangxian0008
+  rotate: true
+  xy: 481, 41
+  size: 6, 78
+  orig: 10, 150
+  offset: 2, 1
+  index: -1
+guangxian0009
+  rotate: true
+  xy: 286, 2
+  size: 6, 69
+  orig: 10, 150
+  offset: 2, 0
+  index: -1
+guangzhu0001
+  rotate: true
+  xy: 2, 11
+  size: 66, 210
+  orig: 70, 210
+  offset: 3, 0
+  index: -1
+guangzhu0002
+  rotate: true
+  xy: 2, 79
+  size: 68, 210
+  orig: 70, 210
+  offset: 2, 0
+  index: -1
+zhen0001
+  rotate: false
+  xy: 573, 118
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0002
+  rotate: false
+  xy: 214, 10
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0003
+  rotate: false
+  xy: 284, 10
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0004
+  rotate: false
+  xy: 354, 10
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0005
+  rotate: false
+  xy: 573, 87
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0006
+  rotate: false
+  xy: 572, 56
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0007
+  rotate: false
+  xy: 572, 56
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0008
+  rotate: false
+  xy: 424, 10
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0009
+  rotate: false
+  xy: 494, 10
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1
+zhen0010
+  rotate: false
+  xy: 572, 25
+  size: 68, 29
+  orig: 68, 29
+  offset: 0, 0
+  index: -1

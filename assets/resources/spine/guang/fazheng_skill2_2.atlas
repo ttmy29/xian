@@ -1,0 +1,55 @@
+
+fazheng_skill2_2.png
+size: 602,169
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+guangquan
+  rotate: false
+  xy: 2, 10
+  size: 155, 75
+  orig: 160, 80
+  offset: 4, 2
+  index: -1
+guangquan02
+  rotate: false
+  xy: 286, 52
+  size: 98, 30
+  orig: 100, 30
+  offset: 1, 0
+  index: -1
+guangquan03
+  rotate: false
+  xy: 159, 22
+  size: 125, 60
+  orig: 130, 70
+  offset: 3, 5
+  index: -1
+guangxian
+  rotate: true
+  xy: 2, 152
+  size: 15, 387
+  orig: 40, 400
+  offset: 12, 6
+  index: -1
+guangzhu
+  rotate: true
+  xy: 391, 2
+  size: 165, 209
+  orig: 200, 220
+  offset: 17, 5
+  index: -1
+guangzhu02
+  rotate: true
+  xy: 2, 87
+  size: 63, 233
+  orig: 100, 250
+  offset: 17, 10
+  index: -1
+heixi
+  rotate: false
+  xy: 237, 84
+  size: 133, 66
+  orig: 140, 75
+  offset: 2, 5
+  index: -1
