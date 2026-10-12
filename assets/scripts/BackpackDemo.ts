@@ -44,6 +44,7 @@ export class BackpackDemo extends Component {
     private countdownLabel: Label | null = null;
     private mergeEffectTemplate: Node | null = null;
     private countdownValue = 0;
+    private countdownStarted = false;
     private nextItemId = 1;
     private gridRoot: Node | null = null;
     private preview: Graphics | null = null;
@@ -54,6 +55,10 @@ export class BackpackDemo extends Component {
     onLoad(): void {
         void ResourceManager.preloadPrefabs(BATTLE_PREFABS).catch(error =>
             console.error('BackpackDemo: 预加载战斗资源失败。', error));
+        void Promise.all([
+            ResourceManager.loadBundlePrefab('role', 'role1'),
+            ResourceManager.loadBundlePrefab('role', 'role2'),
+        ]).catch(error => console.error('BackpackDemo: 预加载角色资源失败。', error));
         const content = this.node.getChildByName('Node');
         const background = content?.getChildByName('bgNode');
         const templates = content?.getChildByName('items');
@@ -90,9 +95,9 @@ export class BackpackDemo extends Component {
     }
 
     onDestroy(): void {
-        this.refreshButtonNode?.off(Button.EventType.CLICK, this.refreshItems, this);
         this.unschedule(this.advanceCountdown);
-        if (this.countdownLabel) Tween.stopAllByTarget(this.countdownLabel.node);
+        const countdownNode = this.countdownLabel?.node;
+        if (countdownNode?.isValid) Tween.stopAllByTarget(countdownNode);
     }
 
     private drawBackground(background: Node): void {
@@ -243,6 +248,7 @@ export class BackpackDemo extends Component {
         } else if (this.candidate && this.inventory.place(item, this.candidate.col, this.candidate.row)) {
             item.node.parent = this.gridRoot;
             item.node.setPosition(this.cellCenterInGrid(item, this.candidate.col, this.candidate.row));
+            if (item.kind === 'icon1' || item.kind === 'icon2') this.startCountdown();
         } else {
             const previous = this.inventory.getPosition(item.id);
             item.node.parent = previous ? this.gridRoot : item.homeParent;
@@ -265,7 +271,6 @@ export class BackpackDemo extends Component {
         target.level = Math.max(target.level, source.level) + 1;
         this.updateItemLabel(target);
         this.playMergeEffect(target.node);
-        if (target.kind === 'icon1') this.startCountdown();
         source.node.active = false;
         source.node.destroy();
         this.items.splice(this.items.indexOf(source), 1);
@@ -287,8 +292,8 @@ export class BackpackDemo extends Component {
     }
 
     private startCountdown(): void {
-        if (!this.countdownNode || !this.countdownLabel) return;
-        this.unschedule(this.advanceCountdown);
+        if (this.countdownStarted || !this.countdownNode || !this.countdownLabel) return;
+        this.countdownStarted = true;
         this.countdownValue = 3;
         this.countdownNode.active = true;
         this.showCountdownNumber();

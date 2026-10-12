@@ -9,7 +9,7 @@ export interface SkillTargetConfig {
 
 export const BATTLE_CONFIG = {
     guide: {
-        firstMonsterTemplate: '1', // 开场引导使用 monsterRoot 下的模板名
+        firstMonsterTemplate: 'monster1', // 开场引导使用的怪物预制体
         firstMonsterX: 0,
         firstMonsterY: -360,
         pointerOffsetX: 14,
@@ -52,7 +52,7 @@ export const BATTLE_CONFIG = {
     },
     skill1: { // 击破 targetRoot/1：三连击
         tripleShotCount: 3, // 每次点击发射的飞剑数量
-        tripleShotDamage: 25, // 普通飞剑和 knife1 的伤害
+        damageBonus: 10, // 在当前飞剑伤害上增加的数值
         knifeVolleySpacing: 24, // 同一轮飞剑的出手间距
         knifeVolleyCenterCurveSide: 0.7, // 中间一把飞剑的弯曲幅度
     },
@@ -67,19 +67,32 @@ export const BATTLE_CONFIG = {
         orbitKnifeHitWidth: 12, // 刀身碰撞半宽
     },
     skill3: { // 击破 targetRoot/3：破盾动画、雷击、警告、怪潮
-        breakRadius: 300, // 3PD2 开始播放时，以角色为圆心的伤害半径
-        breakDamage: 200, // 范围内每只怪物受到一次伤害
+        breakRadius: 300, // 3PD2 每次伤害以角色为圆心的半径
+        breakDamage: 200, // 3PD2 每次命中每只怪物的伤害
+        breakDuration: 2, // 3PD2 完整播放时长（秒）
+        breakHitInterval: 0.5, // 3PD2 范围伤害的间隔（秒）
         leiInterval: 5, // 雷击释放间隔（秒）
         leiTargetCount: 5, // 每轮最多命中多少只不同怪物
         leiDamage: 150, // 每道雷击伤害
-        warnHoldDuration: 2, // 警告显示时长（秒）
-        warnFadeDuration: 0.5, // 警告淡出时长（秒）
+        warnHoldDuration: 0.8, // 警告保持完全可见的时长（秒）
+        warnFadeDuration: 0.2, // 警告淡出时长（秒）；两项合计 1 秒
+        warnShakeOffset: 16, // 红框抖动的最大偏移（像素）
+        warnTextScaleX: 1.3, // 警告文字出现时的横向缩放
+        warnShadeAlpha: 170, // 警告出现时全屏黑色遮罩的不透明度（0～255）
         monsterSpeed: 80, // 动画结束后的怪物移动速度
         monsterSpawnInterval: 0.2, // 动画结束后的刷怪间隔（秒）
     },
     skill4: { // 击破 targetRoot/4：赤焰飞剑
         skillTarget4MaxHp: 300, // 场景未配置血量标签时使用
         knife3Damage: 30, // 点击发射的 knife3 伤害
+        successScaleDuration: 0.8, // success 界面从 0 缩放到 1 的时间（秒）
+        successHoldDuration: 1, // 缩放完成后保持显示的时间（秒）
+    },
+    roleAdvance: { // 击破 4、3 后共用的 lei1 与角色进阶流程
+        lei1Radius: 300, // lei1 播放完成后，以角色为圆心的伤害半径
+        lei1Damage: 300, // 范围内每只怪物受到一次伤害
+        lei1OffsetY: 200, // lei1 特效相对角色向上偏移（像素）
+        skillStartDelay: 2.5, // lei1 开始后等待多久播放当前角色的 skill1（秒）
     },
     skill5: { // 击破 targetRoot/5：龙卷风
         fengSpeed: 320, // 龙卷风前进速度
@@ -95,7 +108,6 @@ export const BATTLE_CONFIG = {
         radialBurstSpacing: 0.4, // 两次齐射的间隔（秒）
     },
     skillTarget: {
-        upgradeEffectDelay: 1,
         skillTargetHitScale: 1.1,
         skillTargetHitPunchDuration: 0.07,
         skillTargetHitRecoverDuration: 0.14,
@@ -120,13 +132,25 @@ export const BATTLE_CONFIG = {
         maxHp: 10, // 怪物初始血量
         speed: 55, // 怪物默认移动速度（像素/秒）
         radius: 8, // 怪物碰撞半径（像素）
+        attackOffsetX: 80, // 怪物停在角色左右两侧的水平距离
+        tempLayerRadius: 120, // 进入角色周围此半径后，将怪物移到 TempLayer
+        attackInterval: 1, // 到达攻击点后，每隔多少秒对角色造成一次伤害
         spawnInterval: 1.0, // 目标 1、6 均击破且目标 3 未击破时的刷怪间隔（秒）
         earlySpawnInterval: 2.0, // 目标 1 或 6 尚未击破时的刷怪间隔（秒）
         perWave: 3, // 每波计划生成的怪物数量
+        spawnMinAbsX: 150, // 普通怪出生时 X 坐标须在 -150 左侧或 150 右侧
         edgePadding: 20, // 怪物出生点距画面边缘的留白（像素）
         spawnSpacing: 80, // 同波怪物出生点之间的期望间距（像素）
         maxAlive: 30, // 场上同时存活的怪物数量上限
-        contactDamage: 10, // 怪物碰到角色时造成的伤害
+        contactDamage: 10, // 怪物每次攻击对角色造成的伤害
         rewardSkillId: 'monster_skill', // 怪物掉落物收集后记录的技能标识
+    },
+    boss: { // 击破 targetRoot/5 后出现的 monster4
+        maxHp: 500, // Boss 血量
+        speed: 100, // Boss 移动速度（像素/秒）
+        spawnDistance: 700, // 出生点距角色的距离，默认从角色上方出现
+        radius: 90, // Boss 与飞剑、角色接触判定半径
+        contactDamage: 10, // Boss 每次攻击对角色造成的伤害
+        contactInterval: 1, // Boss 到达攻击点后的伤害间隔（秒）
     },
 };

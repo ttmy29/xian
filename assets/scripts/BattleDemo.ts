@@ -7,6 +7,8 @@ import { KnifeFlight } from './KnifeFlight';
 import { KnifeTrail } from './KnifeTrail';
 import { MonsterSpawner } from './MonsterSpawner';
 import { ResourceManager } from './ResourceManager';
+import { FailPanel } from './FailPanel';
+import { VictoryPanel } from './VictoryPanel';
 
 const { ccclass } = _decorator;
 type DropPrefabKey = 'diao1' | 'diao2' | 'diao3' | 'diao4';
@@ -30,6 +32,10 @@ interface BattleTarget {
     sceneSkillId?: '1' | '2' | '3' | '4' | '5' | '6';
     lastOrbitHitTime?: number;
     isGuideMonster?: boolean;
+    isBoss?: boolean;
+    attackSide?: -1 | 1;
+    atAttackPoint?: boolean;
+    lastContactTime?: number;
     hitBaseScale?: Vec3;
     hitBaseColor?: Color;
 }
@@ -69,6 +75,9 @@ interface TargetSnapshot {
     position: Vec3;
 }
 
+type RoleLevel = 1 | 2 | 3;
+type UpgradeRoleLevel = 2 | 3;
+
 @ccclass('BattleDemo')
 export class BattleDemo extends Component {
     private readonly targets: BattleTarget[] = [];
@@ -80,19 +89,35 @@ export class BattleDemo extends Component {
     private readonly nodePools = new Map<string, Node[]>();
     private readonly skills = new Map<string, number>();
     private readonly monsterSpawner = new MonsterSpawner();
-    private readonly monsterTemplates: Node[] = [];
+    private readonly monsterTemplates: Prefab[] = [];
+    private bossPrefab: Prefab | null = null;
+    private monstersReady = false;
+    private pendingMonsterStart = false;
+    private bossSpawnRequested = false;
+    private bossSpawned = false;
+    private resultShown = false;
+    private playerDeathStarted = false;
     private readonly dropPrefabs = new Map<DropPrefabKey, Prefab>();
     private backgroundRoot!: Node;
     private targetRoot!: Node;
     private monsterRoot!: Node;
     private dropRoot!: Node;
     private player!: Node;
+    private activeRole: Node | null = null;
+    private roleLevel: RoleLevel = 1;
+    private readonly pendingRoleAdvances = new Set<UpgradeRoleLevel>();
+    private roleAdvanceRunning = false;
+    private roleReady = false;
     private knifeRoot!: Node;
     private effectRoot!: Node;
     private knifeTemplate: Node | null = null;
     private waitSkillPrefab: Prefab | null = null;
     private waitSkillPrefabLoadFailed = false;
     private pendingWaitSkills = 0;
+    private successPrefab: Prefab | null = null;
+    private successPrefabLoadFailed = false;
+    private pendingSuccess = false;
+    private successNode: Node | null = null;
     private hurtPrefab: Prefab | null = null;
     private hurtPrefabLoadFailed = false;
     private readonly pendingDamageTexts: { position: Vec3; damage: number }[] = [];
@@ -108,13 +133,17 @@ export class BattleDemo extends Component {
     private knife3Prefab: Prefab | null = null;
     private leiPrefab: Prefab | null = null;
     private leiPrefabLoadFailed = false;
-    private pendingLeiCast = false;
+    private firstLeiVolley: Promise<void> = Promise.resolve();
     private fengPrefab: Prefab | null = null;
     private fengPrefabLoadFailed = false;
     private pendingFengCast = false;
     private warnPrefab: Prefab | null = null;
     private warnPrefabLoadFailed = false;
     private pendingWarn = false;
+    private monstersPausedForWarn = false;
+    private warnFrame: Node | null = null;
+    private warnFrameBasePosition = new Vec3();
+    private warnElapsed = 0;
     private pendingUpgradeEffects = 0;
     private readonly pendingRadialAngles: number[] = [];
     private battleUI!: Node;
@@ -146,11 +175,34 @@ export class BattleDemo extends Component {
         this.targetRoot = this.getOrCreate('targetRoot');
         this.targetRoot.setSiblingIndex(1);
         this.monsterRoot = this.getOrCreate('monsterRoot');
-        // 场景中的 1/2/3 只作为 Spine 模板，真正上场的是克隆节点。
-        this.monsterTemplates.push(...this.monsterRoot.children.filter(child => /^(1|2|3)$/.test(child.name)));
-        for (const template of this.monsterTemplates) template.active = false;
+        // 旧场景模板不再用于出怪，保留在场景时也不能显示。
+        for (const template of this.monsterRoot.children.filter(child => /^(1|2|3|monster[123])$/.test(child.name))) {
+            template.active = false;
+        }
         this.dropRoot = this.getOrCreate('dropRoot');
         this.player = this.getOrCreate('player');
+        for (const oldRole of [...this.player.children].filter(child => /^role[123]$/.test(child.name))) {
+            oldRole.active = false;
+            oldRole.destroy();
+        }
+        void ResourceManager.loadBundlePrefab('role', 'role1').then(prefab => {
+            if (!this.node.isValid) return;
+            const role1 = instantiate(prefab);
+            role1.parent = this.player;
+            role1.setPosition(0, 0, 0);
+            role1.active = true;
+            this.activeRole = role1;
+            this.roleReady = true;
+            if (this.pendingMonsterStart && this.monstersReady) this.startMonsterSpawns();
+            void this.advanceRoleIfReady();
+        }, error => {
+            if (this.node.isValid) console.error('BattleDemo: 加载 role/role1 失败。', error);
+        });
+        for (const level of [2, 3] as const) {
+            void ResourceManager.loadBundlePrefab('role', `role${level}`).catch(error => {
+                if (this.node.isValid) console.error(`BattleDemo: 加载 role/role${level} 失败。`, error);
+            });
+        }
         this.knifeRoot = this.getOrCreate('knifeRoot');
         this.knifeTemplate = this.knifeRoot.getChildByName('knife');
         if (this.knifeTemplate) this.knifeTemplate.active = false;
@@ -162,6 +214,22 @@ export class BattleDemo extends Component {
         this.battleUI = this.getOrCreate('battleUI');
         this.tempLayer = this.getOrCreate('TempLayer');
         this.tempLayer.getComponent(UITransform)!.setContentSize(canvasSize);
+        void Promise.all((['monster1', 'monster2', 'monster3'] as const)
+            .map(key => ResourceManager.loadPrefab(key))).then(prefabs => {
+            if (!this.node.isValid) return;
+            this.monsterTemplates.push(...prefabs);
+            this.monstersReady = true;
+            if (this.pendingMonsterStart) this.startMonsterSpawns();
+        }, error => {
+            if (this.node.isValid) console.error('BattleDemo: 加载普通怪物预制体失败。', error);
+        });
+        void ResourceManager.loadPrefab('monster4').then(prefab => {
+            if (!this.node.isValid) return;
+            this.bossPrefab = prefab;
+            if (this.bossSpawnRequested) this.spawnBoss();
+        }, error => {
+            if (this.node.isValid) console.error('BattleDemo: 加载 Boss 预制体失败。', error);
+        });
         void ResourceManager.loadPrefab('waitSkill').then(prefab => {
             if (!this.node.isValid) return;
             this.waitSkillPrefab = prefab;
@@ -173,6 +241,16 @@ export class BattleDemo extends Component {
             console.error('BattleDemo: 加载 prefabs/waitSkill 失败。', error);
             this.waitSkillPrefabLoadFailed = true;
             this.pendingWaitSkills = 0;
+        });
+        void ResourceManager.loadPrefab('success').then(prefab => {
+            if (!this.node.isValid) return;
+            this.successPrefab = prefab;
+            if (this.pendingSuccess) this.showSuccess();
+        }, error => {
+            if (!this.node.isValid) return;
+            console.error('BattleDemo: 加载 prefabs/success 失败。', error);
+            this.successPrefabLoadFailed = true;
+            this.pendingSuccess = false;
         });
         void ResourceManager.loadPrefab('hurt').then(prefab => {
             if (!this.node.isValid) return;
@@ -241,15 +319,10 @@ export class BattleDemo extends Component {
         void ResourceManager.loadPrefab('lei').then(prefab => {
             if (!this.node.isValid) return;
             this.leiPrefab = prefab;
-            if (this.pendingLeiCast && this.running) {
-                this.pendingLeiCast = false;
-                this.launchLeiVolley();
-            }
         }, error => {
             if (this.node.isValid) {
                 console.error('BattleDemo: 加载 prefabs/lei 失败。', error);
                 this.leiPrefabLoadFailed = true;
-                this.pendingLeiCast = false;
             }
         });
         void ResourceManager.loadPrefab('feng').then(prefab => {
@@ -300,8 +373,7 @@ export class BattleDemo extends Component {
         this.unschedule(this.launchPeriodicRadialVolley);
         this.unschedule(this.launchLeiVolley);
         this.unschedule(this.launchFeng);
-        this.node.off(Node.EventType.TOUCH_START, this.onTap, this);
-        for (const nodes of this.nodePools.values()) for (const node of nodes) node.destroy();
+        // 场景销毁时，节点事件与池中节点会一同清理。
         this.nodePools.clear();
     }
 
@@ -318,7 +390,7 @@ export class BattleDemo extends Component {
         this.orbitSkillUnlocked = false;
         this.knife3Unlocked = false;
         this.leiSkillUnlocked = false;
-        this.pendingLeiCast = false;
+        this.firstLeiVolley = Promise.resolve();
         this.fengSkillUnlocked = false;
         this.pendingFengCast = false;
         this.pendingWarn = false;
@@ -326,27 +398,43 @@ export class BattleDemo extends Component {
         this.orbitSpawnTimer = 0;
         this.orbitAngle = 0;
         this.radialVolleyIndex = 0;
+        this.pendingRoleAdvances.clear();
+        this.roleAdvanceRunning = false;
+        this.resultShown = false;
+        this.playerDeathStarted = false;
+        this.bossSpawnRequested = false;
+        this.bossSpawned = false;
         this.running = true;
         this.createSkillTargets();
-        const firstTemplate = this.monsterTemplates.find(template => template.name === BATTLE_CONFIG.guide.firstMonsterTemplate);
+        this.pendingMonsterStart = true;
+        if (this.monstersReady && this.roleReady) this.startMonsterSpawns();
+    }
+
+    private startMonsterSpawns(): void {
+        if (!this.pendingMonsterStart || !this.running || !this.monstersReady || !this.roleReady) return;
+        this.pendingMonsterStart = false;
+        const firstTemplate = this.monsterTemplates.find(template => template.data.name === BATTLE_CONFIG.guide.firstMonsterTemplate);
         if (firstTemplate) {
             const firstMonster = this.createMonster(firstTemplate, BATTLE_CONFIG.guide.firstMonsterX, BATTLE_CONFIG.guide.firstMonsterY, true);
             this.showGuide(firstMonster);
         } else {
-            console.error(`BattleDemo: monsterRoot 下缺少引导模板 ${BATTLE_CONFIG.guide.firstMonsterTemplate}`);
+            console.error(`BattleDemo: 缺少引导怪物预制体 ${BATTLE_CONFIG.guide.firstMonsterTemplate}`);
             this.spawnWave();
             this.scheduleMonsterWaves();
         }
     }
 
     update(dt: number): void {
+        this.updateWarnShake(dt);
         if (this.running) {
             this.time += dt;
             if (!this.guideActive) this.updateMonsters(dt);
-            this.updateKnives(dt);
-            this.updateRadialKnives(dt);
-            this.updateOrbitKnives(dt);
-            this.updateFengs(dt);
+            if (this.running) {
+                this.updateKnives(dt);
+                this.updateRadialKnives(dt);
+                this.updateOrbitKnives(dt);
+                this.updateFengs(dt);
+            }
         }
         this.updateTrails(dt);
     }
@@ -410,12 +498,6 @@ export class BattleDemo extends Component {
             g.rect(-width / 2, -height / 2, width, height);
             g.fill();
         }
-        if (!this.player.getComponent(Sprite) && this.player.children.length === 0) {
-            const g = this.player.getComponent(Graphics) ?? this.player.addComponent(Graphics);
-            g.fillColor = new Color(62, 112, 210, 255);
-            g.circle(0, 0, 32);
-            g.fill();
-        }
     }
 
     private createSkillTargets(): void {
@@ -473,21 +555,23 @@ export class BattleDemo extends Component {
         if (!this.running) return;
         const occupied = this.targets
             .filter(target => target.alive && target.kind === 'monster')
-            .map(target => target.node.position.clone());
+            .map(target => this.monsterPositionInRoot(target));
         const canvasSize = this.node.getComponent(UITransform)!.contentSize;
         const requests = this.monsterSpawner.planWave(canvasSize, this.monsterTemplates, occupied);
         for (const request of requests) this.createMonster(request.template, request.x, request.y);
     }
 
-    private createMonster(template: Node, x: number, y: number, isGuideMonster = false): BattleTarget {
+    private createMonster(template: Prefab, x: number, y: number, isGuideMonster = false,
+        isBoss = false): BattleTarget {
         const node = instantiate(template);
-        node.name = `monster_${template.name}`;
+        node.name = template.data.name;
         node.parent = this.monsterRoot;
         node.setPosition(x, y);
         // 模板正缩放时面朝左，向右移动才镜像；始终保留模板的尺寸。
         const playerPosition = this.monsterRoot.getComponent(UITransform)!
             .convertToNodeSpaceAR(this.player.worldPosition);
-        this.faceMonster(node, playerPosition.x - x);
+        const attackSide: -1 | 1 = x > playerPosition.x + BATTLE_CONFIG.monster.spawnMinAbsX ? 1 : -1;
+        this.faceMonster(node, playerPosition.x + attackSide * BATTLE_CONFIG.monster.attackOffsetX - x);
         node.active = true;
         const skeleton = node.getComponent(sp.Skeleton);
         if (isGuideMonster) {
@@ -498,13 +582,23 @@ export class BattleDemo extends Component {
             skeleton?.setAnimation(0, 'move', true);
         }
         const target: BattleTarget = {
-            node, hpLabel: null, hp: BATTLE_CONFIG.monster.maxHp, alive: true,
+            node, hpLabel: null, hp: isBoss ? BATTLE_CONFIG.boss.maxHp : BATTLE_CONFIG.monster.maxHp, alive: true,
             kind: 'monster', rewardSkillId: BATTLE_CONFIG.monster.rewardSkillId,
-            radius: BATTLE_CONFIG.monster.radius,
-            isGuideMonster,
+            radius: isBoss ? BATTLE_CONFIG.boss.radius : BATTLE_CONFIG.monster.radius,
+            isGuideMonster, isBoss, attackSide, atAttackPoint: false,
         };
         this.targets.push(target);
         return target;
+    }
+
+    private spawnBoss(): void {
+        this.bossSpawnRequested = true;
+        if (!this.running || !this.bossPrefab || this.bossSpawned) return;
+        this.bossSpawned = true;
+        const playerPosition = this.monsterRoot.getComponent(UITransform)!
+            .convertToNodeSpaceAR(this.player.worldPosition);
+        this.createMonster(this.bossPrefab, playerPosition.x + BATTLE_CONFIG.monster.spawnMinAbsX + 50,
+            playerPosition.y + BATTLE_CONFIG.boss.spawnDistance, false, true);
     }
 
     private faceMonster(node: Node, directionX: number): void {
@@ -577,33 +671,72 @@ export class BattleDemo extends Component {
         this.scheduleMonsterWaves();
     }
 
+    private monsterPositionInRoot(target: BattleTarget): Vec3 {
+        return this.monsterRoot.getComponent(UITransform)!
+            .convertToNodeSpaceAR(target.node.worldPosition);
+    }
+
+    private setMonsterPositionInRoot(target: BattleTarget, position: Vec3): void {
+        const worldPosition = this.monsterRoot.getComponent(UITransform)!
+            .convertToWorldSpaceAR(position);
+        target.node.setWorldPosition(worldPosition);
+    }
+
+    private moveMonsterToTempLayerIfNear(target: BattleTarget, position: Vec3,
+        playerPosition: Vec3): void {
+        if (target.node.parent === this.tempLayer) return;
+        const dx = position.x - playerPosition.x;
+        const dy = position.y - playerPosition.y;
+        if (dx * dx + dy * dy > BATTLE_CONFIG.monster.tempLayerRadius ** 2 + 0.001) return;
+        const worldPosition = target.node.worldPosition.clone();
+        target.node.parent = this.tempLayer;
+        target.node.setWorldPosition(worldPosition);
+    }
+
     private updateMonsters(dt: number): void {
+        if (this.monstersPausedForWarn) return;
         const playerPosition = this.monsterRoot.getComponent(UITransform)!
             .convertToNodeSpaceAR(this.player.worldPosition);
         for (const target of [...this.targets]) {
             if (!target.alive || target.kind !== 'monster') continue;
-            const position = target.node.position;
-            const dx = playerPosition.x - position.x;
+            const position = this.monsterPositionInRoot(target);
+            const destinationX = playerPosition.x + (target.attackSide ?? -1) * BATTLE_CONFIG.monster.attackOffsetX;
+            const dx = destinationX - position.x;
             const dy = playerPosition.y - position.y;
             const distance = Math.hypot(dx, dy);
-            if (distance <= target.radius + 28) {
-                target.alive = false;
-                this.removeTarget(target);
-                target.node.destroy();
-                this.playerHp = Math.max(0, this.playerHp - BATTLE_CONFIG.monster.contactDamage);
-                if (this.playerHp === 0) {
-                    this.running = false;
-                    this.unschedule(this.spawnWave);
-                    this.unschedule(this.launchPeriodicRadialVolley);
+            const speed = target.isBoss ? BATTLE_CONFIG.boss.speed : this.leiSkillUnlocked
+                ? BATTLE_CONFIG.skill3.monsterSpeed : BATTLE_CONFIG.monster.speed;
+            if (distance > 0.001 && distance > speed * dt) {
+                if (target.atAttackPoint) {
+                    target.atAttackPoint = false;
+                    target.node.getComponent(sp.Skeleton)?.setAnimation(0, 'move', true);
                 }
+                this.faceMonster(target.node, dx);
+                const step = speed * dt;
+                const next = new Vec3(position.x + dx / distance * step,
+                    position.y + dy / distance * step, position.z);
+                this.setMonsterPositionInRoot(target, next);
+                this.moveMonsterToTempLayerIfNear(target, next, playerPosition);
                 continue;
             }
-            const speed = this.leiSkillUnlocked
-                ? BATTLE_CONFIG.skill3.monsterSpeed : BATTLE_CONFIG.monster.speed;
-            const step = Math.min(distance, speed * dt);
-            this.faceMonster(target.node, dx);
-            target.node.setPosition(position.x + dx / distance * step,
-                position.y + dy / distance * step);
+            const destination = new Vec3(destinationX, playerPosition.y, position.z);
+            this.setMonsterPositionInRoot(target, destination);
+            this.moveMonsterToTempLayerIfNear(target, destination, playerPosition);
+            this.faceMonster(target.node, playerPosition.x - destinationX);
+            if (!target.atAttackPoint) {
+                target.atAttackPoint = true;
+                target.node.getComponent(sp.Skeleton)?.setAnimation(0, 'phyattack', true);
+            }
+            const interval = target.isBoss ? BATTLE_CONFIG.boss.contactInterval : BATTLE_CONFIG.monster.attackInterval;
+            if (this.time - (target.lastContactTime ?? -Infinity) < interval) continue;
+            target.lastContactTime = this.time;
+            const damage = target.isBoss ? BATTLE_CONFIG.boss.contactDamage : BATTLE_CONFIG.monster.contactDamage;
+            this.playerHp = Math.max(0, this.playerHp - damage);
+            this.showDamageText(this.player.worldPosition.clone(), damage);
+            if (this.playerHp === 0) {
+                void this.playPlayerDeath();
+                return;
+            }
         }
     }
 
@@ -630,6 +763,7 @@ export class BattleDemo extends Component {
     }
 
     private onTap(_event: EventTouch): void {
+        if (!this.roleReady) return;
         if (this.guideActive) {
             const firstMonster = this.targets.find(target => target.isGuideMonster && target.alive);
             firstMonster?.node.getComponent(sp.Skeleton)?.setAnimation(0, 'move', true);
@@ -745,7 +879,7 @@ export class BattleDemo extends Component {
     }
 
     private damageTarget(target: BattleTarget, damage: number, hitEffect: HitPrefabKey = 'hit'): void {
-        if (!target.alive) return;
+        if (!this.running || !target.alive) return;
         let hitPosition = target.node.worldPosition.clone();
         if (target.kind === 'monster') {
             this.showDamageText(target.node.worldPosition.clone(), damage);
@@ -833,10 +967,7 @@ export class BattleDemo extends Component {
         const poolKey = `hit:${prefab._uuid}`;
         const effect = this.acquireNode(poolKey, prefab, this.effectRoot);
         effect.setWorldPosition(position);
-        const skeleton = effect.getComponent(sp.Skeleton);
-        const entry = skeleton?.setAnimation(0, animation, false);
-        if (entry) skeleton!.setTrackCompleteListener(entry, () => this.releaseNode(poolKey, effect, 48));
-        else this.releaseNode(poolKey, effect, 48);
+        void this.playOneShotSpine(effect, animation, () => this.releaseNode(poolKey, effect, 48));
     }
 
     private killTarget(target: BattleTarget): void {
@@ -845,16 +976,21 @@ export class BattleDemo extends Component {
             target.node.active = false;
             this.removeTarget(target);
             this.playWaitSkill();
+            if (target.sceneSkillId !== '3') {
+                this.grantSceneSkill(target.sceneSkillId, target.rewardSkillId);
+            }
             if (target.sceneSkillId === '3') {
                 void this.playTarget3BreakSequence(target.rewardSkillId);
+            } else if (target.sceneSkillId === '4') {
+                void this.playTarget4BreakSequence();
             } else if (target.sceneSkillId === '5') {
-                void this.playTarget5BreakSequence(target.rewardSkillId);
-            } else {
-                this.grantSceneSkill(target.sceneSkillId, target.rewardSkillId);
+                void this.playBreakEffect('5PD1');
+                this.spawnBoss();
             }
             return;
         }
-        const drop = this.spawnMonsterDrop(target);
+        if (target.isBoss) this.stopBattleActions();
+        const drop = target.isBoss ? null : this.spawnMonsterDrop(target);
         let deathFinished = false;
         const finishDeath = (): void => {
             if (deathFinished) return;
@@ -862,6 +998,7 @@ export class BattleDemo extends Component {
             this.removeTarget(target);
             target.node.destroy();
             if (drop) this.scheduleOnce(() => this.collectMonsterDrop(drop), BATTLE_CONFIG.monsterDrop.collectDelay);
+            if (target.isBoss) this.finishBattle('victory');
         };
         const skeleton = target.node.getComponent(sp.Skeleton);
         if (skeleton) {
@@ -891,25 +1028,36 @@ export class BattleDemo extends Component {
         effect.parent = this.player;
         effect.setPosition(0, 0);
         effect.active = true;
-        const skeleton = effect.getComponent(sp.Skeleton);
-        const entry = skeleton?.setAnimation(0, 'animation', false);
-        if (entry) skeleton!.setTrackCompleteListener(entry, () => effect.destroy());
-        else effect.destroy();
+        void this.playOneShotSpine(effect, 'animation');
     }
 
     private async playTarget3BreakSequence(skillName: string): Promise<void> {
         await this.playBreakEffect('3PD1');
         if (!this.node.isValid) return;
         await this.playBreakEffect('3PD2');
-        if (this.node.isValid) this.grantSceneSkill('3', skillName);
+        if (!this.node.isValid) return;
+        this.grantSceneSkill('3', skillName);
+        await this.firstLeiVolley;
+        if (this.running && this.node.isValid) await this.playLei1Upgrade(3);
     }
 
-    private async playTarget5BreakSequence(skillName: string): Promise<void> {
-        await this.playBreakEffect('5PD1');
-        if (this.node.isValid) this.grantSceneSkill('5', skillName);
+    private async playTarget4BreakSequence(): Promise<void> {
+        await this.playLei1Upgrade(2);
     }
 
-    private async playBreakEffect(key: '3PD1' | '3PD2' | '5PD1'): Promise<void> {
+    private async playLei1Upgrade(nextRole: UpgradeRoleLevel): Promise<void> {
+        await this.playBreakEffect('lei1', () => {
+            this.scheduleOnce(() => this.requestRoleAdvance(nextRole),
+                Math.max(0, BATTLE_CONFIG.roleAdvance.skillStartDelay));
+        });
+        if (!this.running || !this.node.isValid) return;
+        this.damageMonstersNearPlayer(BATTLE_CONFIG.roleAdvance.lei1Radius,
+            BATTLE_CONFIG.roleAdvance.lei1Damage, 'hit');
+        if (nextRole === 2) this.showSuccess();
+    }
+
+    private async playBreakEffect(key: '3PD1' | '3PD2' | '5PD1' | 'lei1',
+        onStarted?: () => void): Promise<void> {
         let prefab: Prefab;
         try {
             prefab = await ResourceManager.loadPrefab(key);
@@ -922,6 +1070,11 @@ export class BattleDemo extends Component {
             const effect = instantiate(prefab);
             effect.parent = this.effectRoot;
             if (key === '5PD1') effect.setWorldPosition(this.player.worldPosition);
+            else if (key === 'lei1') {
+                const position = this.player.worldPosition;
+                effect.setWorldPosition(position.x,
+                    position.y + BATTLE_CONFIG.roleAdvance.lei1OffsetY, position.z);
+            }
             const skeleton = effect.getComponent(sp.Skeleton);
             if (!skeleton) {
                 console.error(`BattleDemo: prefabs/${key} 缺少 Spine 组件。`);
@@ -929,33 +1082,59 @@ export class BattleDemo extends Component {
                 resolve();
                 return;
             }
-            const entry = skeleton.setAnimation(0, 'animation', false);
+            const animation = key === 'lei1' ? 'pojing_xian' : 'animation';
+            if (key === '3PD2') {
+                const clipDuration = skeleton.findAnimation(animation)?.duration;
+                if (clipDuration && clipDuration > 0) {
+                    skeleton.timeScale = clipDuration / Math.max(0.01, BATTLE_CONFIG.skill3.breakDuration);
+                }
+            }
+            const entry = skeleton.setAnimation(0, animation, false);
             if (!entry) {
-                console.error(`BattleDemo: prefabs/${key} 缺少 animation 动画。`);
+                console.error(`BattleDemo: prefabs/${key} 缺少 ${animation} 动画。`);
                 effect.destroy();
                 resolve();
                 return;
             }
-            skeleton.setTrackCompleteListener(entry, () => {
-                effect.destroy();
-                resolve();
-            });
-            if (key === '3PD2') this.damageMonstersNearPlayer(
-                BATTLE_CONFIG.skill3.breakRadius, BATTLE_CONFIG.skill3.breakDamage);
+            onStarted?.();
+            if (key === '3PD2') {
+                const duration = Math.max(0.01, BATTLE_CONFIG.skill3.breakDuration);
+                const interval = Math.max(0.01, BATTLE_CONFIG.skill3.breakHitInterval);
+                const hitCount = Math.floor((duration + 0.000001) / interval);
+                const hit = (): void => {
+                    this.damageMonstersNearPlayer(BATTLE_CONFIG.skill3.breakRadius,
+                        BATTLE_CONFIG.skill3.breakDamage);
+                };
+                for (let index = 1; index <= hitCount; index++) {
+                    const at = index * interval;
+                    if (at < duration - 0.000001) this.scheduleOnce(() => hit(), at);
+                }
+                this.scheduleOnce(() => {
+                    if (Math.abs(hitCount * interval - duration) < 0.000001) hit();
+                    effect.destroy();
+                    resolve();
+                }, duration);
+            } else {
+                skeleton.setTrackCompleteListener(entry, () => {
+                    effect.destroy();
+                    resolve();
+                });
+            }
         });
     }
 
-    private damageMonstersNearPlayer(radius: number, damage: number): void {
+    private damageMonstersNearPlayer(radius: number, damage: number,
+        hitEffect: HitPrefabKey = 'hit2'): void {
         if (!this.running) return;
         const center = this.monsterRoot.getComponent(UITransform)!
             .convertToNodeSpaceAR(this.player.worldPosition);
         const radiusSquared = radius * radius;
         for (const target of [...this.targets]) {
             if (!target.alive || target.kind !== 'monster') continue;
-            const position = target.node.position;
+            const position = this.monsterPositionInRoot(target);
             const dx = position.x - center.x;
             const dy = position.y - center.y;
-            if (dx * dx + dy * dy <= radiusSquared) this.damageTarget(target, damage, 'hit2');
+            if (dx * dx + dy * dy <= radiusSquared) this.damageTarget(target, damage, hitEffect);
         }
     }
 
@@ -963,14 +1142,14 @@ export class BattleDemo extends Component {
         this.skills.set(skillName, (this.skills.get(skillName) ?? 0) + 1);
         if (id === '1') {
             this.tripleShotUnlocked = true;
-            this.knifeDamage = BATTLE_CONFIG.skill1.tripleShotDamage;
+            this.knifeDamage += BATTLE_CONFIG.skill1.damageBonus;
         } else if (id === '2') {
             this.orbitSkillUnlocked = true;
             this.spawnOrbitKnife();
         } else if (id === '3') {
             this.leiSkillUnlocked = true;
             this.showWarn();
-            this.launchLeiVolley();
+            this.firstLeiVolley = this.launchLeiVolley();
             this.schedule(this.launchLeiVolley, Math.max(0.01, BATTLE_CONFIG.skill3.leiInterval));
         } else if (id === '4') {
             this.knife3Unlocked = true;
@@ -990,7 +1169,151 @@ export class BattleDemo extends Component {
                 (target.sceneSkillId === '1' || target.sceneSkillId === '6')))) {
             this.scheduleMonsterWaves();
         }
-        this.scheduleOnce(() => this.playUpgradeEffect(), BATTLE_CONFIG.skillTarget.upgradeEffectDelay);
+    }
+
+    private requestRoleAdvance(nextRole: UpgradeRoleLevel): void {
+        if (!this.running || !this.node.isValid || this.roleLevel >= nextRole) return;
+        this.pendingRoleAdvances.add(nextRole);
+        void this.advanceRoleIfReady();
+    }
+
+    private async advanceRoleIfReady(): Promise<void> {
+        if (!this.running || !this.node.isValid || this.roleAdvanceRunning || !this.activeRole) return;
+        const nextRole = this.roleLevel + 1;
+        if (nextRole > 3 || !this.pendingRoleAdvances.has(nextRole as UpgradeRoleLevel)) return;
+        this.roleAdvanceRunning = true;
+        let advanced = false;
+        const oldRole = this.activeRole;
+        try {
+            await this.playRoleSkill1(oldRole);
+            if (!this.running || !this.node.isValid || this.activeRole !== oldRole) return;
+            const prefab = await ResourceManager.loadBundlePrefab('role', `role${nextRole}`);
+            if (!this.running || !this.node.isValid || this.activeRole !== oldRole) return;
+            oldRole.active = false;
+            oldRole.destroy();
+            const role = instantiate(prefab);
+            role.parent = this.player;
+            role.setPosition(0, 0, 0);
+            role.active = true;
+            this.activeRole = role;
+            this.roleLevel = nextRole as RoleLevel;
+            this.pendingRoleAdvances.delete(nextRole as UpgradeRoleLevel);
+            this.playUpgradeEffect();
+            if (nextRole === 3) this.showSuccess();
+            advanced = true;
+        } catch (error) {
+            if (this.node.isValid) console.error(`BattleDemo: 角色切换到 role${nextRole} 失败。`, error);
+        } finally {
+            this.roleAdvanceRunning = false;
+        }
+        if (advanced) void this.advanceRoleIfReady();
+    }
+
+    private async playRoleSkill1(roleNode: Node): Promise<void> {
+        const spineRoot = roleNode.getChildByName('spine');
+        const skeletons = spineRoot?.children
+            .map(child => child.getComponent(sp.Skeleton))
+            .filter((skeleton): skeleton is sp.Skeleton => skeleton !== null) ?? [];
+        if (skeletons.length === 0) {
+            console.error(`BattleDemo: ${roleNode.name}/spine 下没有可播放 skill1 的 Spine 组件。`);
+        }
+        await Promise.all(skeletons.map(skeleton => new Promise<void>(resolve => {
+            if (!skeleton.findAnimation('skill1')) {
+                console.error(`BattleDemo: ${roleNode.name}/spine/${skeleton.node.name} 缺少 skill1 动画。`);
+                resolve();
+                return;
+            }
+            const entry = skeleton.setAnimation(0, 'skill1', false);
+            if (entry) skeleton.setTrackCompleteListener(entry, () => resolve());
+            else resolve();
+        })));
+    }
+
+    private showSuccess(): void {
+        if (!this.running || this.resultShown || this.successPrefabLoadFailed) return;
+        if (!this.successPrefab) {
+            this.pendingSuccess = true;
+            return;
+        }
+        this.pendingSuccess = false;
+        if (this.successNode?.isValid) {
+            Tween.stopAllByTarget(this.successNode);
+            this.successNode.destroy();
+        }
+        this.successNode = null;
+        const success = instantiate(this.successPrefab);
+        this.tempLayer.setSiblingIndex(this.node.children.length - 1);
+        success.parent = this.tempLayer;
+        success.setSiblingIndex(this.tempLayer.children.length - 1);
+        success.setScale(0, 0, 1);
+        success.active = true;
+        this.successNode = success;
+        tween(success).to(Math.max(0.01, BATTLE_CONFIG.skill4.successScaleDuration),
+            { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
+            .delay(Math.max(0, BATTLE_CONFIG.skill4.successHoldDuration))
+            .call(() => {
+                success.destroy();
+                if (this.successNode === success) this.successNode = null;
+            })
+            .start();
+    }
+
+    private stopBattleActions(): void {
+        this.running = false;
+        this.unschedule(this.spawnWave);
+        this.unschedule(this.launchPeriodicRadialVolley);
+        this.unschedule(this.launchLeiVolley);
+        this.unschedule(this.launchFeng);
+    }
+
+    private async playPlayerDeath(): Promise<void> {
+        if (this.playerDeathStarted || this.resultShown) return;
+        this.playerDeathStarted = true;
+        this.stopBattleActions();
+        const role = this.activeRole;
+        const skeletons = role?.getChildByName('spine')?.children
+            .map(child => child.getComponent(sp.Skeleton))
+            .filter((skeleton): skeleton is sp.Skeleton => skeleton !== null) ?? [];
+        if (skeletons.length === 0) {
+            console.error('BattleDemo: 当前角色没有可播放 die 的 Spine 组件。');
+        }
+        await Promise.all(skeletons.map(skeleton => new Promise<void>(resolve => {
+            if (!skeleton.findAnimation('die')) {
+                console.error(`BattleDemo: ${role?.name}/spine/${skeleton.node.name} 缺少 die 动画。`);
+                resolve();
+                return;
+            }
+            const entry = skeleton.setAnimation(0, 'die', false);
+            if (entry) skeleton.setTrackCompleteListener(entry, () => resolve());
+            else resolve();
+        })));
+        if (this.node.isValid) this.finishBattle('fail');
+    }
+
+    private finishBattle(result: 'victory' | 'fail'): void {
+        if (this.resultShown || (this.playerDeathStarted && result === 'victory')) return;
+        this.resultShown = true;
+        this.stopBattleActions();
+        void ResourceManager.loadBundlePrefab('result', result).then(prefab => {
+            if (!this.node.isValid) return;
+            this.showResultPanel(result, prefab);
+        }, error => {
+            if (this.node.isValid) console.error(`BattleDemo: 加载 result/${result} 失败。`, error);
+        });
+    }
+
+    private showResultPanel(result: 'victory' | 'fail', prefab: Prefab): void {
+        const panel = instantiate(prefab);
+        this.tempLayer.setSiblingIndex(this.node.children.length - 1);
+        panel.parent = this.tempLayer;
+        panel.setPosition(0, 0);
+        panel.setSiblingIndex(this.tempLayer.children.length - 1);
+        panel.active = true;
+        if (result === 'victory') {
+            (panel.getComponent(VictoryPanel) ?? panel.addComponent(VictoryPanel)).play(null);
+        } else {
+            (panel.getComponent(FailPanel) ?? panel.addComponent(FailPanel)).play(null);
+        }
     }
 
     private playUpgradeEffect(): void {
@@ -1002,10 +1325,21 @@ export class BattleDemo extends Component {
         const effect = instantiate(this.upgradePrefab);
         effect.parent = this.player;
         effect.setPosition(0, 0);
+        void this.playOneShotSpine(effect, 'sx');
+    }
+
+    private playOneShotSpine(effect: Node, animation: string,
+        finish: () => void = () => effect.destroy()): Promise<void> {
         const skeleton = effect.getComponent(sp.Skeleton);
-        const entry = skeleton?.setAnimation(0, 'sx', false);
-        if (entry) skeleton!.setTrackCompleteListener(entry, () => effect.destroy());
-        else effect.destroy();
+        const entry = skeleton?.setAnimation(0, animation, false);
+        if (!entry) {
+            finish();
+            return Promise.resolve();
+        }
+        return new Promise(resolve => skeleton!.setTrackCompleteListener(entry, () => {
+            finish();
+            resolve();
+        }));
     }
 
     private showWarn(): void {
@@ -1014,40 +1348,102 @@ export class BattleDemo extends Component {
             this.pendingWarn = true;
             return;
         }
+        this.tempLayer.setSiblingIndex(this.node.children.length - 1);
+        const canvas = this.tempLayer.getComponent(UITransform)!.contentSize;
+        const shade = new Node('warnShade');
+        shade.layer = this.tempLayer.layer;
+        shade.parent = this.tempLayer;
+        shade.addComponent(UITransform).setContentSize(canvas);
+        const shadeGraphics = shade.addComponent(Graphics);
+        shadeGraphics.fillColor = new Color(0, 0, 0, BATTLE_CONFIG.skill3.warnShadeAlpha);
+        shadeGraphics.rect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+        shadeGraphics.fill();
+        const shadeOpacity = shade.addComponent(UIOpacity);
+        shadeOpacity.opacity = 255;
         const warn = instantiate(this.warnPrefab);
         warn.parent = this.tempLayer;
-        warn.setPosition(0, 400);
+        warn.setPosition(0, 0);
         warn.setSiblingIndex(this.tempLayer.children.length - 1);
+        this.monstersPausedForWarn = true;
+        this.warnFrame = warn.getChildByName('kuang');
+        const frameTransform = this.warnFrame?.getComponent(UITransform);
+        if (this.warnFrame && frameTransform) {
+            const shakeMargin = Math.max(0, BATTLE_CONFIG.skill3.warnShakeOffset);
+            this.warnFrame.setScale(
+                (canvas.width + shakeMargin * 2) / frameTransform.contentSize.width,
+                (canvas.height + shakeMargin * 2) / frameTransform.contentSize.height,
+                this.warnFrame.scale.z,
+            );
+        }
+        this.warnFrameBasePosition = this.warnFrame?.position.clone() ?? new Vec3();
+        this.warnElapsed = 0;
+        const text = warn.getChildByName('wenben');
+        if (text) {
+            const base = text.scale;
+            text.setScale(BATTLE_CONFIG.skill3.warnTextScaleX, base.y, base.z);
+            tween(text)
+                .to(0.08, { scale: new Vec3(0.95, base.y, base.z) })
+                .to(0.08, { scale: new Vec3(1.08, base.y, base.z) })
+                .to(0.12, { scale: new Vec3(1, base.y, base.z) })
+                .start();
+        }
         const opacity = warn.getComponent(UIOpacity) ?? warn.addComponent(UIOpacity);
         opacity.opacity = 255;
+        tween(shadeOpacity).delay(Math.max(0, BATTLE_CONFIG.skill3.warnHoldDuration))
+            .to(Math.max(0.01, BATTLE_CONFIG.skill3.warnFadeDuration), { opacity: 0 })
+            .start();
         tween(opacity).delay(Math.max(0, BATTLE_CONFIG.skill3.warnHoldDuration))
             .to(Math.max(0.01, BATTLE_CONFIG.skill3.warnFadeDuration), { opacity: 0 })
-            .call(() => warn.destroy()).start();
+            .call(() => {
+                this.monstersPausedForWarn = false;
+                this.warnFrame = null;
+                shade.destroy();
+                warn.destroy();
+            }).start();
     }
 
-    private launchLeiVolley(): void {
+    private updateWarnShake(dt: number): void {
+        if (!this.warnFrame?.isValid) return;
+        this.warnElapsed += dt;
+        const offset = BATTLE_CONFIG.skill3.warnShakeOffset;
+        this.warnFrame.setPosition(
+            this.warnFrameBasePosition.x + Math.sin(this.warnElapsed * 90) * offset,
+            this.warnFrameBasePosition.y + Math.cos(this.warnElapsed * 73) * offset * 0.7,
+            this.warnFrameBasePosition.z,
+        );
+    }
+
+    private async launchLeiVolley(): Promise<void> {
         if (!this.running || !this.leiSkillUnlocked || this.leiPrefabLoadFailed) return;
         if (!this.leiPrefab) {
-            this.pendingLeiCast = true;
-            return;
+            try {
+                this.leiPrefab = await ResourceManager.loadPrefab('lei');
+            } catch (error) {
+                if (this.node.isValid) console.error('BattleDemo: 加载 prefabs/lei 失败。', error);
+                return;
+            }
         }
+        if (!this.running || !this.node.isValid) return;
         const playerPosition = this.monsterRoot.getComponent(UITransform)!
             .convertToNodeSpaceAR(this.player.worldPosition);
         const distanceSquared = (target: BattleTarget): number => {
-            const dx = target.node.position.x - playerPosition.x;
-            const dy = target.node.position.y - playerPosition.y;
+            const position = this.monsterPositionInRoot(target);
+            const dx = position.x - playerPosition.x;
+            const dy = position.y - playerPosition.y;
             return dx * dx + dy * dy;
         };
         const count = Math.max(0, Math.floor(BATTLE_CONFIG.skill3.leiTargetCount));
         const monsters = this.targets.filter(target => target.alive && target.kind === 'monster')
             .sort((a, b) => distanceSquared(a) - distanceSquared(b)).slice(0, count);
-        for (const monster of monsters) {
-            this.playLeiEffect(monster.node.worldPosition.clone());
+        const effects = monsters.map(monster => {
+            const effect = this.playLeiEffect(monster.node.worldPosition.clone());
             this.damageTarget(monster, BATTLE_CONFIG.skill3.leiDamage, 'hit2');
-        }
+            return effect;
+        });
+        await Promise.all(effects);
     }
 
-    private playLeiEffect(position: Vec3): void {
+    private playLeiEffect(position: Vec3): Promise<void> {
         const effect = instantiate(this.leiPrefab!);
         effect.parent = this.effectRoot;
         effect.setWorldPosition(position);
@@ -1056,10 +1452,7 @@ export class BattleDemo extends Component {
             const offsetX = (0.5 - transform.anchorX) * transform.contentSize.width * effect.scale.x;
             effect.setPosition(effect.position.x - offsetX, effect.position.y);
         }
-        const skeleton = effect.getComponent(sp.Skeleton);
-        const entry = skeleton?.setAnimation(0, 'animation', false);
-        if (entry) skeleton!.setTrackCompleteListener(entry, () => effect.destroy());
-        else effect.destroy();
+        return this.playOneShotSpine(effect, 'animation');
     }
 
     private launchFeng(): void {
