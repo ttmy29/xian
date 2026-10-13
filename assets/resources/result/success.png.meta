@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "e477eac1-b113-4107-9df6-d3197a1e4438",
+  "uuid": "0c417b30-2d9e-4168-9b6f-9439e109245f",
   "files": [
     ".json",
     ".png"
@@ -10,14 +10,14 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "e477eac1-b113-4107-9df6-d3197a1e4438@6c48a",
-      "displayName": "妖王来袭",
+      "uuid": "0c417b30-2d9e-4168-9b6f-9439e109245f@6c48a",
+      "displayName": "success",
       "id": "6c48a",
       "name": "texture",
       "userData": {
         "wrapModeS": "clamp-to-edge",
         "wrapModeT": "clamp-to-edge",
-        "imageUuidOrDatabaseUri": "e477eac1-b113-4107-9df6-d3197a1e4438",
+        "imageUuidOrDatabaseUri": "0c417b30-2d9e-4168-9b6f-9439e109245f",
         "isUuid": true,
         "visible": false,
         "minfilter": "linear",
@@ -34,8 +34,8 @@
     },
     "f9941": {
       "importer": "sprite-frame",
-      "uuid": "e477eac1-b113-4107-9df6-d3197a1e4438@f9941",
-      "displayName": "妖王来袭",
+      "uuid": "0c417b30-2d9e-4168-9b6f-9439e109245f@f9941",
+      "displayName": "success",
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
@@ -45,10 +45,10 @@
         "offsetY": 0,
         "trimX": 0,
         "trimY": 0,
-        "width": 750,
-        "height": 393,
-        "rawWidth": 750,
-        "rawHeight": 393,
+        "width": 686,
+        "height": 275,
+        "rawWidth": 686,
+        "rawHeight": 275,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -60,17 +60,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -375,
-            -196.5,
+            -343,
+            -137.5,
             0,
-            375,
-            -196.5,
+            343,
+            -137.5,
             0,
-            -375,
-            196.5,
+            -343,
+            137.5,
             0,
-            375,
-            196.5,
+            343,
+            137.5,
             0
           ],
           "indexes": [
@@ -83,12 +83,12 @@
           ],
           "uv": [
             0,
-            393,
-            750,
-            393,
+            275,
+            686,
+            275,
             0,
             0,
-            750,
+            686,
             0
           ],
           "nuv": [
@@ -102,18 +102,18 @@
             1
           ],
           "minPos": [
-            -375,
-            -196.5,
+            -343,
+            -137.5,
             0
           ],
           "maxPos": [
-            375,
-            196.5,
+            343,
+            137.5,
             0
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "e477eac1-b113-4107-9df6-d3197a1e4438@6c48a",
+        "imageUuidOrDatabaseUri": "0c417b30-2d9e-4168-9b6f-9439e109245f@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -129,6 +129,6 @@
     "type": "sprite-frame",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "e477eac1-b113-4107-9df6-d3197a1e4438@6c48a"
+    "redirect": "0c417b30-2d9e-4168-9b6f-9439e109245f@6c48a"
   }
 }

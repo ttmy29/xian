@@ -28,8 +28,9 @@ export class MonsterSpawner {
                 Math.max(transform.anchorY, 1 - transform.anchorY);
             const limitX = viewport.width / 2 - extentX - BATTLE_CONFIG.monster.edgePadding;
             const limitY = viewport.height / 2 - extentY - BATTLE_CONFIG.monster.edgePadding;
+            const maxY = Math.min(limitY, BATTLE_CONFIG.monster.spawnMaxY);
             const minAbsX = BATTLE_CONFIG.monster.spawnMinAbsX + 1;
-            if (limitX <= minAbsX || limitY <= 0) continue;
+            if (limitX <= minAbsX || limitY <= 0 || maxY < -limitY) continue;
 
             // 一波分散到不同画面边缘；多个候选位置中优先选离现有怪物较远的点。
             const side = (firstSide + index) % 4;
@@ -39,7 +40,8 @@ export class MonsterSpawner {
                 const along = Math.random() * 2 - 1;
                 const x = side === 0 ? -limitX : side === 1 ? limitX
                     : (along < 0 ? -1 : 1) * (minAbsX + Math.abs(along) * (limitX - minAbsX));
-                const y = side === 2 ? -limitY : side === 3 ? limitY : along * limitY;
+                const y = side === 2 ? -limitY : side === 3 ? maxY
+                    : -limitY + (along + 1) * 0.5 * (maxY + limitY);
                 let nearestDistanceSquared = Infinity;
                 for (const other of occupied) {
                     const dx = other.x - x;

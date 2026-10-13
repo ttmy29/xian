@@ -1,8 +1,9 @@
 import {
     _decorator, Animation, Color, Component, EventTouch, Graphics, instantiate, Label, Node,
-    Prefab, sp, Sprite, tween, Tween, UIOpacity, UITransform, Vec3,
+    Prefab, Quat, sp, Sprite, tween, Tween, UIOpacity, UITransform, Vec3,
 } from 'cc';
 import { BATTLE_CONFIG, SkillTargetConfig } from './BattleConfig';
+import { AudioManager } from './AudioManager';
 import { KnifeFlight } from './KnifeFlight';
 import { KnifeTrail } from './KnifeTrail';
 import { MonsterSpawner } from './MonsterSpawner';
@@ -80,6 +81,7 @@ type UpgradeRoleLevel = 2 | 3;
 
 @ccclass('BattleDemo')
 export class BattleDemo extends Component {
+    private audio!: AudioManager;
     private readonly targets: BattleTarget[] = [];
     private readonly knives: FlyingKnife[] = [];
     private readonly radialKnives: RadialKnife[] = [];
@@ -112,6 +114,7 @@ export class BattleDemo extends Component {
     private roleAdvanceRunning = false;
     private roleReady = false;
     private knifeRoot!: Node;
+    private tempKnife1!: Node;
     private effectRoot!: Node;
     private knifeTemplate: Node | null = null;
     private waitSkillPrefab: Prefab | null = null;
@@ -147,6 +150,9 @@ export class BattleDemo extends Component {
     private warnFrame: Node | null = null;
     private warnFrameBasePosition = new Vec3();
     private warnElapsed = 0;
+    private screenShakeBasePosition = new Vec3();
+    private screenShakeElapsed = 0;
+    private screenShakeRemaining = 0;
     private pendingUpgradeEffects = 0;
     private readonly pendingRadialAngles: number[] = [];
     private battleUI!: Node;
@@ -172,12 +178,16 @@ export class BattleDemo extends Component {
     private nextKnifeCurveSide = 1;
 
     onLoad(): void {
+        this.audio = AudioManager.getOrCreate(this.node.parent!);
         const canvasSize = this.node.parent!.getComponent(UITransform)!.contentSize;
         this.node.getComponent(UITransform)!.setContentSize(canvasSize);
         this.backgroundRoot = this.getOrCreate('bgNode');
         this.targetRoot = this.getOrCreate('targetRoot');
-        this.targetRoot.setSiblingIndex(1);
         this.monsterRoot = this.getOrCreate('monsterRoot');
+        // 保留地图物品的场景层级，只在怪物位于其上方时把怪物移到其前面。
+        if (this.monsterRoot.getSiblingIndex() > this.targetRoot.getSiblingIndex()) {
+            this.monsterRoot.setSiblingIndex(this.targetRoot.getSiblingIndex());
+        }
         // 旧场景模板不再用于出怪，保留在场景时也不能显示。
         for (const template of this.monsterRoot.children.filter(child => /^(1|2|3|monster[123])$/.test(child.name))) {
             template.active = false;
@@ -207,13 +217,14 @@ export class BattleDemo extends Component {
             });
         }
         this.knifeRoot = this.getOrCreate('knifeRoot');
+        this.tempKnife1 = this.getOrCreate('TempKnife1');
         this.knifeTemplate = this.knifeRoot.getChildByName('knife');
         if (this.knifeTemplate) this.knifeTemplate.active = false;
         else console.error('BattleDemo: knifeRoot 下缺少飞剑模板 knife。');
         this.effectRoot = this.getOrCreate('effectRoot');
         this.effectRoot.layer = this.node.layer;
         this.effectRoot.getComponent(UITransform)!.setContentSize(canvasSize);
-        this.effectRoot.setSiblingIndex(this.knifeRoot.getSiblingIndex() + 1);
+        // 特效层的绘制顺序沿用场景配置。
         this.battleUI = this.getOrCreate('battleUI');
         this.tempLayer = this.getOrCreate('TempLayer');
         this.tempLayer.getComponent(UITransform)!.setContentSize(canvasSize);
@@ -372,6 +383,7 @@ export class BattleDemo extends Component {
     }
 
     onDestroy(): void {
+        this.stopScreenShake();
         this.unschedule(this.spawnWave);
         this.unschedule(this.launchPeriodicRadialVolley);
         this.unschedule(this.launchLeiVolley);
@@ -383,6 +395,7 @@ export class BattleDemo extends Component {
     /** 背包倒计时结束后调用；最高等级 icon1 决定每把飞剑的伤害。 */
     public startBattle(highestIcon1Level: number): void {
         if (this.running) return;
+        this.screenShakeBasePosition = this.node.position.clone();
         this.knifeDamage = highestIcon1Level > 0
             ? BATTLE_CONFIG.knife.icon1BaseDamage + (highestIcon1Level - 1) * BATTLE_CONFIG.knife.icon1DamagePerLevel
             : 0;
@@ -430,6 +443,7 @@ export class BattleDemo extends Component {
 
     update(dt: number): void {
         this.updateWarnShake(dt);
+        this.updateScreenShake(dt);
         if (this.running) {
             this.time += dt;
             if (this.baohuFollowsPlayer && this.baohuNode?.isValid) {
@@ -591,7 +605,7 @@ export class BattleDemo extends Component {
         const node = instantiate(template);
         node.name = template.data.name;
         node.parent = this.monsterRoot;
-        node.setPosition(x, y);
+        node.setPosition(x, Math.min(y, BATTLE_CONFIG.monster.spawnMaxY));
         // 模板正缩放时面朝左，向右移动才镜像；始终保留模板的尺寸。
         const playerPosition = this.monsterRoot.getComponent(UITransform)!
             .convertToNodeSpaceAR(this.player.worldPosition);
@@ -637,9 +651,10 @@ export class BattleDemo extends Component {
     private showGuide(target: BattleTarget): void {
         const size = this.node.getComponent(UITransform)!.contentSize;
         const radius = BATTLE_CONFIG.guide.spotlightRadius;
-        const center = target.node.position.clone();
+        const center = this.monsterPositionInRoot(target);
         center.y += BATTLE_CONFIG.guide.spotlightOffsetY;
-        this.spotlightNode = this.makeNode(this.targetRoot, 'guideSpotlight', radius * 2, radius * 2);
+        this.spotlightNode = this.makeNode(this.monsterRoot, 'guideSpotlight', radius * 2, radius * 2);
+        this.spotlightNode.setSiblingIndex(0);
         this.spotlightNode.setPosition(center);
         const light = this.spotlightNode.addComponent(Graphics);
         light.fillColor = new Color(255, 255, 255, BATTLE_CONFIG.guide.spotlightAlpha);
@@ -649,7 +664,9 @@ export class BattleDemo extends Component {
         this.maskNode.getComponent(UITransform)!.setContentSize(size);
         this.maskNode.setSiblingIndex(this.node.children.length - 1);
         const shade = this.maskNode.getComponent(Graphics) ?? this.maskNode.addComponent(Graphics);
-        this.drawShadeWithHole(shade, size.width, size.height, center.x, center.y, radius);
+        const holeCenter = this.maskNode.getComponent(UITransform)!
+            .convertToNodeSpaceAR(this.spotlightNode.worldPosition);
+        this.drawShadeWithHole(shade, size.width, size.height, holeCenter.x, holeCenter.y, radius);
         const pointer = this.maskNode.getChildByName('yindao');
         if (pointer) {
             const local = this.maskNode.getComponent(UITransform)!.convertToNodeSpaceAR(target.node.worldPosition);
@@ -807,6 +824,7 @@ export class BattleDemo extends Component {
         const targets = this.guidedTargets()
             .sort((a, b) => distanceFromLaunch(a) - distanceFromLaunch(b));
         if (!targets.length) return;
+        this.audio.playEffect('FeiJian');
         this.lastShotTime = this.time;
         for (let index = 0; index < count; index++) {
             const target = targets[index % targets.length];
@@ -878,6 +896,7 @@ export class BattleDemo extends Component {
             }
             if (step.hit) {
                 knife.trail.clearNow();
+                if (knife.target.kind === 'monster' && knife.target.alive) this.audio.playEffect('attack1');
                 this.damageTarget(knife.target,
                     knife.isKnife3 ? BATTLE_CONFIG.skill4.knife3Damage : this.knifeDamage,
                     knife.isKnife3 ? 'hit4' : 'hit');
@@ -1093,6 +1112,11 @@ export class BattleDemo extends Component {
                 const hitTargets = new Set<BattleTarget>();
                 let effectFinished = false;
                 void this.playBreakEffect('lei2', () => {
+                    this.scheduleOnce(() => {
+                        if (effectFinished || !this.running || !this.node.isValid) return;
+                        this.audio.playEffect('duJie');
+                        this.startScreenShake();
+                    }, Math.max(0, BATTLE_CONFIG.roleAdvance.lei2VisibleDelay));
                     this.scheduleOnce(() => {
                         if (effectFinished || !this.running) return;
                         this.activeLei2HitSets.add(hitTargets);
@@ -1338,6 +1362,7 @@ export class BattleDemo extends Component {
 
     private stopBattleActions(): void {
         this.running = false;
+        this.stopScreenShake();
         this.activeLei2HitSets.clear();
         this.unschedule(this.spawnWave);
         this.unschedule(this.launchPeriodicRadialVolley);
@@ -1494,6 +1519,7 @@ export class BattleDemo extends Component {
         shadeOpacity.opacity = 255;
         const warn = instantiate(this.warnPrefab);
         warn.parent = this.tempLayer;
+        this.audio.playEffect('warn');
         warn.setPosition(0, 0);
         warn.setSiblingIndex(this.tempLayer.children.length - 1);
         this.monstersPausedForWarn = true;
@@ -1543,6 +1569,40 @@ export class BattleDemo extends Component {
             this.warnFrameBasePosition.y + Math.cos(this.warnElapsed * 73) * offset * 0.7,
             this.warnFrameBasePosition.z,
         );
+    }
+
+    private startScreenShake(): void {
+        if (BATTLE_CONFIG.roleAdvance.lei2ShakeDuration <= 0) {
+            this.stopScreenShake();
+            return;
+        }
+        if (this.screenShakeRemaining <= 0) this.screenShakeBasePosition = this.node.position.clone();
+        this.screenShakeElapsed = 0;
+        this.screenShakeRemaining = Math.max(0, BATTLE_CONFIG.roleAdvance.lei2ShakeDuration);
+    }
+
+    private updateScreenShake(dt: number): void {
+        if (this.screenShakeRemaining <= 0) return;
+        this.screenShakeElapsed += dt;
+        this.screenShakeRemaining = Math.max(0, this.screenShakeRemaining - dt);
+        if (this.screenShakeRemaining === 0) {
+            this.node.setPosition(this.screenShakeBasePosition);
+            return;
+        }
+        const duration = Math.max(0.01, BATTLE_CONFIG.roleAdvance.lei2ShakeDuration);
+        const offset = BATTLE_CONFIG.roleAdvance.lei2ShakeOffset * this.screenShakeRemaining / duration;
+        this.node.setPosition(
+            this.screenShakeBasePosition.x + Math.sin(this.screenShakeElapsed * 90) * offset,
+            this.screenShakeBasePosition.y + Math.cos(this.screenShakeElapsed * 73) * offset * 0.7,
+            this.screenShakeBasePosition.z,
+        );
+    }
+
+    private stopScreenShake(): void {
+        if (this.screenShakeRemaining > 0 && this.node.isValid) {
+            this.node.setPosition(this.screenShakeBasePosition);
+        }
+        this.screenShakeRemaining = 0;
     }
 
     private async launchLeiVolley(): Promise<void> {
@@ -1643,6 +1703,7 @@ export class BattleDemo extends Component {
         node.parent = this.effectRoot;
         node.setPosition(origin);
         node.getComponent(sp.Skeleton)?.setAnimation(0, 'animation', true);
+        this.audio.playEffect('Tornado');
         this.fengProjectiles.push({ node, directionX, directionY, age: 0,
             hitTargets: new Set<BattleTarget>() });
     }
@@ -1788,6 +1849,7 @@ export class BattleDemo extends Component {
         const centerX = transform ? (0.5 - transform.anchorX) * transform.contentSize.width * blade.scale.x : 0;
         const centerY = transform ? (0.5 - transform.anchorY) * transform.contentSize.height * blade.scale.y : 0;
         blade.setPosition(-centerX, -centerY);
+        wrapper.setParent(this.tempKnife1, true);
         this.orbitKnives.push({ node: wrapper, slot: this.orbitSpawnCount,
             halfLength: transform ? transform.contentSize.height * Math.abs(blade.scale.y) / 2 : 0 });
         this.orbitSpawnCount++;
@@ -1807,18 +1869,22 @@ export class BattleDemo extends Component {
         }
         // 等最后一把剑生成后，下一帧才开始旋转。
         if (allKnivesReady) this.orbitAngle += BATTLE_CONFIG.skill2.orbitKnifeAngularSpeed * Math.PI / 180 * dt;
-        const center = this.knifeRoot.getComponent(UITransform)!
-            .convertToNodeSpaceAR(this.player.worldPosition);
+        const knifeTransform = this.knifeRoot.getComponent(UITransform)!;
+        const center = knifeTransform.convertToNodeSpaceAR(this.player.worldPosition);
         center.y += BATTLE_CONFIG.skill2.orbitKnifeCenterOffsetY;
         const radius = BATTLE_CONFIG.skill2.orbitKnifeRadius;
         const candidates = this.snapshotTargets(this.targets);
+        const localRotation = new Quat();
+        const worldRotation = new Quat();
         for (const knife of this.orbitKnives) {
             const angle = this.orbitAngle + knife.slot * Math.PI * 2 / Math.max(1, count);
             const x = center.x + Math.cos(angle) * radius;
             const y = center.y + Math.sin(angle) * radius;
-            knife.node.setPosition(x, y);
+            knife.node.setWorldPosition(knifeTransform.convertToWorldSpaceAR(new Vec3(x, y, 0)));
             // 预制体剑尖朝本地 +Y；剑柄朝角色，剑尖沿半径向外。
-            knife.node.angle = angle * 180 / Math.PI - 90;
+            Quat.fromEuler(localRotation, 0, 0, angle * 180 / Math.PI - 90);
+            Quat.multiply(worldRotation, this.knifeRoot.worldRotation, localRotation);
+            knife.node.setWorldRotation(worldRotation);
             const axisX = Math.cos(angle);
             const axisY = Math.sin(angle);
             for (const candidate of candidates) {
@@ -1831,6 +1897,7 @@ export class BattleDemo extends Component {
                 const dy = position.y - y - along * axisY;
                 if (dx * dx + dy * dy > (target.radius + BATTLE_CONFIG.skill2.orbitKnifeHitWidth) ** 2) continue;
                 target.lastOrbitHitTime = this.time;
+                if (target.kind === 'monster') this.audio.playEffect('bigJian');
                 this.damageTarget(target, BATTLE_CONFIG.skill2.orbitKnifeDamage);
             }
         }

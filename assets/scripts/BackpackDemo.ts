@@ -3,6 +3,7 @@ import {
     sp, Sprite, Tween, tween, UITransform, Vec2, Vec3,
 } from 'cc';
 import { BACKPACK_CONFIG, BackpackItemConfig } from './BackpackConfig';
+import { AudioManager } from './AudioManager';
 import { BattleDemo } from './BattleDemo';
 import { GridItem, GridPosition, InventoryGrid } from './InventoryGrid';
 import { BATTLE_PREFABS } from './ResourceConfig';
@@ -53,6 +54,7 @@ export class BackpackDemo extends Component {
     private mergeTarget: DraggableItem | null = null;
 
     onLoad(): void {
+        AudioManager.getOrCreate(this.node).startBgm();
         void ResourceManager.preloadPrefabs(BATTLE_PREFABS).catch(error =>
             console.error('BackpackDemo: 预加载战斗资源失败。', error));
         void Promise.all([
@@ -218,6 +220,9 @@ export class BackpackDemo extends Component {
     }
 
     private startDrag(item: DraggableItem, event: EventTouch): void {
+        const audio = AudioManager.getOrCreate(this.node);
+        audio.startBgm();
+        audio.playEffect('Click');
         this.dragging = item;
         const fromTray = item.node.parent === item.homeParent;
         Tween.stopAllByTarget(item.node);
@@ -419,6 +424,7 @@ export class BackpackDemo extends Component {
     /** 刷新按钮调用：只替换下方物品，格子里已放置的物品保留。 */
     public refreshItems(): void {
         if (this.dragging || !this.templatesRoot) return;
+        AudioManager.getOrCreate(this.node).playEffect('Click');
         this.preview?.clear();
         this.candidate = null;
         this.mergeTarget = null;

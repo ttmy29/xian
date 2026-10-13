@@ -59,12 +59,12 @@ export const BATTLE_CONFIG = {
     skill2: { // 击破 targetRoot/2：环绕飞剑
         orbitKnifeCount: 18, // 总数量
         orbitKnifeSpawnSpacing: 0.1, // 每把生成间隔（秒）
-        orbitKnifeRadius: 180, // 环绕半径
+        orbitKnifeRadius: 200, // 环绕半径 180
         orbitKnifeCenterOffsetY: 50, // 环绕圆心相对角色的纵向偏移
         orbitKnifeAngularSpeed: 180, // 每秒旋转角度
         orbitKnifeDamage: 25, // 每次命中伤害
         orbitKnifeHitInterval: 0.5, // 同一目标重复受击间隔（秒）
-        orbitKnifeHitWidth: 12, // 刀身碰撞半宽
+        orbitKnifeHitWidth: 15, // 刀身碰撞半宽   0.3  0.4
     },
     skill3: { // 击破 targetRoot/3：破盾动画、雷击、警告、怪潮
         breakRadius: 300, // 3PD2 每次伤害以角色为圆心的半径
@@ -88,13 +88,16 @@ export const BATTLE_CONFIG = {
         successScaleDuration: 0.8, // success 界面从 0 缩放到 1 的时间（秒）
         successHoldDuration: 1, // 缩放完成后保持显示的时间（秒）
     },
-    roleAdvance: { // 击破 4、3 后共用的 lei1、lei2 与角色进阶流程
+    roleAdvance: { // 击破 2、3 后共用的 lei1、lei2 与角色进阶流程
         lei2Radius: 400, // lei2 每次伤害以角色为圆心的半径
         lei2Damage: 300, // lei2 每次对范围内每只怪物造成的伤害
         lei2DamageDelay: 1, // lei2 开始后前 1 秒不造成伤害
         lei1OffsetY: 200, // lei1 特效相对角色向上偏移（像素）
         skillStartDelay: 2.5, // lei1 开始后等待多久播放当前角色的 skill1（秒）
-        lei2StartDelay: 1.5, // lei1 开始后等待多久启动 lei2（素材前约 1 秒为空白）
+        lei2StartDelay: 1.5, // lei1 开始后等待多久启动 lei2
+        lei2VisibleDelay: 1, // lei2 开始后等待真正显现的时间；此时播放 duJie 并震屏
+        lei2ShakeDuration: 1.5, // lei2 显现时的震屏时长（秒）
+        lei2ShakeOffset: 50, // lei2 震屏最大偏移（像素）
     },
     skill5: { // 击破 targetRoot/5：龙卷风
         fengSpeed: 320, // 龙卷风前进速度
@@ -141,6 +144,7 @@ export const BATTLE_CONFIG = {
         earlySpawnInterval: 2.0, // 目标 1 或 6 尚未击破时的刷怪间隔（秒）
         perWave: 3, // 每波计划生成的怪物数量
         spawnMinAbsX: 150, // 普通怪出生时 X 坐标须在 -150 左侧或 150 右侧
+        spawnMaxY: 550, // 所有怪物出生时在 monsterRoot 下的 Y 坐标上限
         edgePadding: 20, // 怪物出生点距画面边缘的留白（像素）
         spawnSpacing: 80, // 同波怪物出生点之间的期望间距（像素）
         maxAlive: 30, // 场上同时存活的怪物数量上限
