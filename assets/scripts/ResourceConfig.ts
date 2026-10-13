@@ -8,11 +8,13 @@ export const PREFAB_PATHS = {
     sxsj: 'prefabs/sxsj',
     waitSkill: 'prefabs/waitSkill',
     success: 'prefabs/success',
+    baohu: 'prefabs/baohu',
     knife1: 'prefabs/knife1',
     knife2: 'prefabs/knife2',
     knife3: 'prefabs/knife3',
     lei: 'prefabs/lei',
     lei1: 'prefabs/lei1',
+    lei2: 'prefabs/lei2',
     feng: 'prefabs/feng',
     warn: 'prefabs/warn',
     diao1: 'prefabs/diao1',
@@ -30,4 +32,4 @@ export const PREFAB_PATHS = {
 
 export type PrefabKey = keyof typeof PREFAB_PATHS;
 
-export const BATTLE_PREFABS: readonly PrefabKey[] = ['hurt', 'hit', 'hit2', 'hit3', 'hit4', 'sxsj', 'waitSkill', 'success', 'knife1', 'knife2', 'knife3', 'lei', 'lei1', 'feng', 'warn', 'diao1', 'diao2', 'diao3', 'diao4', '3PD1', '3PD2', '5PD1', 'monster1', 'monster2', 'monster3', 'monster4'];
+export const BATTLE_PREFABS: readonly PrefabKey[] = ['hurt', 'hit', 'hit2', 'hit3', 'hit4', 'sxsj', 'waitSkill', 'success', 'baohu', 'knife1', 'knife2', 'knife3', 'lei', 'lei1', 'lei2', 'feng', 'warn', 'diao1', 'diao2', 'diao3', 'diao4', '3PD1', '3PD2', '5PD1', 'monster1', 'monster2', 'monster3', 'monster4'];

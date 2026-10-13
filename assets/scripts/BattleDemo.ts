@@ -86,6 +86,7 @@ export class BattleDemo extends Component {
     private readonly orbitKnives: OrbitKnife[] = [];
     private readonly fengProjectiles: FengProjectile[] = [];
     private readonly trails: KnifeTrail[] = [];
+    private readonly activeLei2HitSets = new Set<Set<BattleTarget>>();
     private readonly nodePools = new Map<string, Node[]>();
     private readonly skills = new Map<string, number>();
     private readonly monsterSpawner = new MonsterSpawner();
@@ -103,6 +104,8 @@ export class BattleDemo extends Component {
     private monsterRoot!: Node;
     private dropRoot!: Node;
     private player!: Node;
+    private baohuNode: Node | null = null;
+    private baohuFollowsPlayer = false;
     private activeRole: Node | null = null;
     private roleLevel: RoleLevel = 1;
     private readonly pendingRoleAdvances = new Set<UpgradeRoleLevel>();
@@ -405,6 +408,7 @@ export class BattleDemo extends Component {
         this.bossSpawnRequested = false;
         this.bossSpawned = false;
         this.running = true;
+        void this.showBaohu();
         this.createSkillTargets();
         this.pendingMonsterStart = true;
         if (this.monstersReady && this.roleReady) this.startMonsterSpawns();
@@ -428,8 +432,12 @@ export class BattleDemo extends Component {
         this.updateWarnShake(dt);
         if (this.running) {
             this.time += dt;
+            if (this.baohuFollowsPlayer && this.baohuNode?.isValid) {
+                this.baohuNode.setWorldPosition(this.player.worldPosition);
+            }
             if (!this.guideActive) this.updateMonsters(dt);
             if (this.running) {
+                this.updateLei2Damage();
                 this.updateKnives(dt);
                 this.updateRadialKnives(dt);
                 this.updateOrbitKnives(dt);
@@ -448,6 +456,23 @@ export class BattleDemo extends Component {
             child.addComponent(UITransform);
         }
         return child;
+    }
+
+    private async showBaohu(): Promise<void> {
+        try {
+            const prefab = await ResourceManager.loadPrefab('baohu');
+            if (!this.running || !this.node.isValid || this.baohuNode?.isValid) return;
+            const baohu = instantiate(prefab);
+            baohu.parent = this.node;
+            const skeleton = baohu.getComponent(sp.Skeleton);
+            this.baohuFollowsPlayer = !!skeleton?.skeletonData;
+            if (this.baohuFollowsPlayer) baohu.setWorldPosition(this.player.worldPosition);
+            baohu.setSiblingIndex(this.player.getSiblingIndex() + 1);
+            if (this.baohuFollowsPlayer) skeleton?.setAnimation(0, 'animation', true);
+            this.baohuNode = baohu;
+        } catch (error) {
+            if (this.node.isValid) console.error('BattleDemo: 加载 prefabs/baohu 失败。', error);
+        }
     }
 
     private acquireNode(key: string, template: Node | Prefab, parent: Node): Node {
@@ -979,18 +1004,22 @@ export class BattleDemo extends Component {
             if (target.sceneSkillId !== '3') {
                 this.grantSceneSkill(target.sceneSkillId, target.rewardSkillId);
             }
-            if (target.sceneSkillId === '3') {
+            if (target.sceneSkillId === '2') {
+                void this.playTarget2BreakSequence();
+            } else if (target.sceneSkillId === '3') {
                 void this.playTarget3BreakSequence(target.rewardSkillId);
-            } else if (target.sceneSkillId === '4') {
-                void this.playTarget4BreakSequence();
             } else if (target.sceneSkillId === '5') {
                 void this.playBreakEffect('5PD1');
                 this.spawnBoss();
             }
             return;
         }
-        if (target.isBoss) this.stopBattleActions();
-        const drop = target.isBoss ? null : this.spawnMonsterDrop(target);
+        if (target.isBoss) {
+            this.stopBattleActions();
+            void this.playVictoryDeaths();
+            return;
+        }
+        const drop = this.spawnMonsterDrop(target);
         let deathFinished = false;
         const finishDeath = (): void => {
             if (deathFinished) return;
@@ -998,7 +1027,6 @@ export class BattleDemo extends Component {
             this.removeTarget(target);
             target.node.destroy();
             if (drop) this.scheduleOnce(() => this.collectMonsterDrop(drop), BATTLE_CONFIG.monsterDrop.collectDelay);
-            if (target.isBoss) this.finishBattle('victory');
         };
         const skeleton = target.node.getComponent(sp.Skeleton);
         if (skeleton) {
@@ -1041,22 +1069,52 @@ export class BattleDemo extends Component {
         if (this.running && this.node.isValid) await this.playLei1Upgrade(3);
     }
 
-    private async playTarget4BreakSequence(): Promise<void> {
+    private async playTarget2BreakSequence(): Promise<void> {
         await this.playLei1Upgrade(2);
     }
 
     private async playLei1Upgrade(nextRole: UpgradeRoleLevel): Promise<void> {
+        try {
+            await ResourceManager.loadPrefab('lei2');
+        } catch (error) {
+            console.error('BattleDemo: 预加载 prefabs/lei2 失败。', error);
+        }
+        if (!this.running || !this.node.isValid) return;
+        let resolveLei2Finished: () => void = () => {};
+        const lei2Finished = new Promise<void>(resolve => { resolveLei2Finished = resolve; });
+        let lei1Started = false;
         await this.playBreakEffect('lei1', () => {
+            lei1Started = true;
+            this.scheduleOnce(() => {
+                if (!this.running || !this.node.isValid) {
+                    resolveLei2Finished();
+                    return;
+                }
+                const hitTargets = new Set<BattleTarget>();
+                let effectFinished = false;
+                void this.playBreakEffect('lei2', () => {
+                    this.scheduleOnce(() => {
+                        if (effectFinished || !this.running) return;
+                        this.activeLei2HitSets.add(hitTargets);
+                        this.updateLei2Damage();
+                    }, Math.max(0, BATTLE_CONFIG.roleAdvance.lei2DamageDelay));
+                }).then(() => {
+                    effectFinished = true;
+                    this.activeLei2HitSets.delete(hitTargets);
+                    resolveLei2Finished();
+                });
+            }, Math.max(0, BATTLE_CONFIG.roleAdvance.lei2StartDelay));
             this.scheduleOnce(() => this.requestRoleAdvance(nextRole),
                 Math.max(0, BATTLE_CONFIG.roleAdvance.skillStartDelay));
         });
+        if (!lei1Started) resolveLei2Finished();
         if (!this.running || !this.node.isValid) return;
-        this.damageMonstersNearPlayer(BATTLE_CONFIG.roleAdvance.lei1Radius,
-            BATTLE_CONFIG.roleAdvance.lei1Damage, 'hit');
+        await lei2Finished;
+        if (!this.running || !this.node.isValid) return;
         if (nextRole === 2) this.showSuccess();
     }
 
-    private async playBreakEffect(key: '3PD1' | '3PD2' | '5PD1' | 'lei1',
+    private async playBreakEffect(key: '3PD1' | '3PD2' | '5PD1' | 'lei1' | 'lei2',
         onStarted?: () => void): Promise<void> {
         let prefab: Prefab;
         try {
@@ -1070,7 +1128,7 @@ export class BattleDemo extends Component {
             const effect = instantiate(prefab);
             effect.parent = this.effectRoot;
             if (key === '5PD1') effect.setWorldPosition(this.player.worldPosition);
-            else if (key === 'lei1') {
+            else if (key === 'lei1' || key === 'lei2') {
                 const position = this.player.worldPosition;
                 effect.setWorldPosition(position.x,
                     position.y + BATTLE_CONFIG.roleAdvance.lei1OffsetY, position.z);
@@ -1082,7 +1140,8 @@ export class BattleDemo extends Component {
                 resolve();
                 return;
             }
-            const animation = key === 'lei1' ? 'pojing_xian' : 'animation';
+            const animation = key === 'lei1' ? 'pojing_xian'
+                : key === 'lei2' ? 'effect' : 'animation';
             if (key === '3PD2') {
                 const clipDuration = skeleton.findAnimation(animation)?.duration;
                 if (clipDuration && clipDuration > 0) {
@@ -1135,6 +1194,25 @@ export class BattleDemo extends Component {
             const dx = position.x - center.x;
             const dy = position.y - center.y;
             if (dx * dx + dy * dy <= radiusSquared) this.damageTarget(target, damage, hitEffect);
+        }
+    }
+
+    private updateLei2Damage(): void {
+        if (!this.running || this.activeLei2HitSets.size === 0) return;
+        const center = this.monsterRoot.getComponent(UITransform)!
+            .convertToNodeSpaceAR(this.player.worldPosition);
+        const radiusSquared = BATTLE_CONFIG.roleAdvance.lei2Radius ** 2;
+        for (const hitTargets of this.activeLei2HitSets) {
+            for (const target of [...this.targets]) {
+                if (!this.running) return;
+                if (!target.alive || target.kind !== 'monster' || hitTargets.has(target)) continue;
+                const position = this.monsterPositionInRoot(target);
+                const dx = position.x - center.x;
+                const dy = position.y - center.y;
+                if (dx * dx + dy * dy > radiusSquared) continue;
+                hitTargets.add(target);
+                this.damageTarget(target, BATTLE_CONFIG.roleAdvance.lei2Damage, 'hit');
+            }
         }
     }
 
@@ -1260,10 +1338,64 @@ export class BattleDemo extends Component {
 
     private stopBattleActions(): void {
         this.running = false;
+        this.activeLei2HitSets.clear();
         this.unschedule(this.spawnWave);
         this.unschedule(this.launchPeriodicRadialVolley);
         this.unschedule(this.launchLeiVolley);
         this.unschedule(this.launchFeng);
+    }
+
+    private async playVictoryDeaths(): Promise<void> {
+        const monsters = [...this.targets].filter(target => target.kind === 'monster');
+        for (const target of monsters) target.alive = false;
+        await Promise.all(monsters.map(target => new Promise<void>(resolve => {
+            if (!target.node.isValid) {
+                this.removeTarget(target);
+                resolve();
+                return;
+            }
+            let finished = false;
+            const finishDeath = (): void => {
+                if (finished) return;
+                finished = true;
+                this.unschedule(finishDeath);
+                this.removeTarget(target);
+                if (target.node.isValid) target.node.destroy();
+                resolve();
+            };
+            const scheduleFallback = (duration: number): void => {
+                const seconds = Number.isFinite(duration) ? duration : 3;
+                this.scheduleOnce(finishDeath, Math.min(8, Math.max(0.5, seconds + 0.5)));
+            };
+            try {
+                Tween.stopAllByTarget(target.node);
+                const skeleton = target.node.getComponent(sp.Skeleton);
+                const dieAnimation = skeleton?.skeletonData && skeleton.findAnimation('die');
+                if (skeleton && dieAnimation) {
+                    const entry = skeleton.setAnimation(0, 'die', false);
+                    if (entry) {
+                        skeleton.setTrackCompleteListener(entry, finishDeath);
+                        scheduleFallback(dieAnimation.duration / Math.max(0.1, skeleton.timeScale));
+                        return;
+                    }
+                }
+                const animation = target.node.getComponent(Animation);
+                const deathState = animation?.getState('death');
+                if (animation && deathState) {
+                    animation.off(Animation.EventType.FINISHED);
+                    animation.once(Animation.EventType.FINISHED, finishDeath);
+                    animation.play('death');
+                    scheduleFallback(deathState.duration / Math.max(0.1, deathState.speed));
+                } else {
+                    tween(target.node).to(0.3, { scale: new Vec3(0, 0, 1) }).call(finishDeath).start();
+                    scheduleFallback(0.3);
+                }
+            } catch (error) {
+                console.error(`BattleDemo: ${target.node.name} 播放死亡动画失败。`, error);
+                finishDeath();
+            }
+        })));
+        if (this.node.isValid) this.finishBattle('victory');
     }
 
     private async playPlayerDeath(): Promise<void> {

@@ -1,0 +1,48 @@
+
+liuchan_skill1_06.png
+size: 175,1083
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+sk1_d3_00000
+  rotate: true
+  xy: 2, 888
+  size: 193, 160
+  orig: 200, 171
+  offset: 5, 9
+  index: -1
+sk1_d3_00002
+  rotate: true
+  xy: 2, 693
+  size: 193, 160
+  orig: 200, 171
+  offset: 5, 9
+  index: -1
+sk1_d3_00004
+  rotate: true
+  xy: 2, 498
+  size: 193, 160
+  orig: 200, 171
+  offset: 5, 9
+  index: -1
+sk1_d3_00006
+  rotate: true
+  xy: 2, 108
+  size: 193, 159
+  orig: 200, 171
+  offset: 5, 10
+  index: -1
+sk1_d3_00008
+  rotate: true
+  xy: 2, 303
+  size: 193, 160
+  orig: 200, 171
+  offset: 5, 9
+  index: -1
+sk1_d3yuan
+  rotate: true
+  xy: 2, 2
+  size: 104, 171
+  orig: 111, 180
+  offset: 3, 5
+  index: -1

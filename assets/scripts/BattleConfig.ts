@@ -88,11 +88,13 @@ export const BATTLE_CONFIG = {
         successScaleDuration: 0.8, // success 界面从 0 缩放到 1 的时间（秒）
         successHoldDuration: 1, // 缩放完成后保持显示的时间（秒）
     },
-    roleAdvance: { // 击破 4、3 后共用的 lei1 与角色进阶流程
-        lei1Radius: 300, // lei1 播放完成后，以角色为圆心的伤害半径
-        lei1Damage: 300, // 范围内每只怪物受到一次伤害
+    roleAdvance: { // 击破 4、3 后共用的 lei1、lei2 与角色进阶流程
+        lei2Radius: 400, // lei2 每次伤害以角色为圆心的半径
+        lei2Damage: 300, // lei2 每次对范围内每只怪物造成的伤害
+        lei2DamageDelay: 1, // lei2 开始后前 1 秒不造成伤害
         lei1OffsetY: 200, // lei1 特效相对角色向上偏移（像素）
         skillStartDelay: 2.5, // lei1 开始后等待多久播放当前角色的 skill1（秒）
+        lei2StartDelay: 1.5, // lei1 开始后等待多久启动 lei2（素材前约 1 秒为空白）
     },
     skill5: { // 击破 targetRoot/5：龙卷风
         fengSpeed: 320, // 龙卷风前进速度

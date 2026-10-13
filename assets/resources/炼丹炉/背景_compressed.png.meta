@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "6564ee70-5441-462b-899a-2cc69b10bfad",
+  "uuid": "d2fe8f23-b279-44e2-a73d-7b28d0e9434b",
   "files": [
     ".json",
     ".png"
@@ -10,14 +10,14 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "6564ee70-5441-462b-899a-2cc69b10bfad@6c48a",
-      "displayName": "金色龙纹九宫格香炉1",
+      "uuid": "d2fe8f23-b279-44e2-a73d-7b28d0e9434b@6c48a",
+      "displayName": "背景_compressed",
       "id": "6c48a",
       "name": "texture",
       "userData": {
         "wrapModeS": "clamp-to-edge",
         "wrapModeT": "clamp-to-edge",
-        "imageUuidOrDatabaseUri": "6564ee70-5441-462b-899a-2cc69b10bfad",
+        "imageUuidOrDatabaseUri": "d2fe8f23-b279-44e2-a73d-7b28d0e9434b",
         "isUuid": true,
         "visible": false,
         "minfilter": "linear",
@@ -34,8 +34,8 @@
     },
     "f9941": {
       "importer": "sprite-frame",
-      "uuid": "6564ee70-5441-462b-899a-2cc69b10bfad@f9941",
-      "displayName": "金色龙纹九宫格香炉1",
+      "uuid": "d2fe8f23-b279-44e2-a73d-7b28d0e9434b@f9941",
+      "displayName": "背景_compressed",
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
@@ -45,10 +45,10 @@
         "offsetY": 0,
         "trimX": 0,
         "trimY": 0,
-        "width": 736,
-        "height": 899,
-        "rawWidth": 736,
-        "rawHeight": 899,
+        "width": 750,
+        "height": 1700,
+        "rawWidth": 750,
+        "rawHeight": 1700,
         "borderTop": 0,
         "borderBottom": 0,
         "borderLeft": 0,
@@ -60,17 +60,17 @@
         "meshType": 0,
         "vertices": {
           "rawPosition": [
-            -368,
-            -449.5,
+            -375,
+            -850,
             0,
-            368,
-            -449.5,
+            375,
+            -850,
             0,
-            -368,
-            449.5,
+            -375,
+            850,
             0,
-            368,
-            449.5,
+            375,
+            850,
             0
           ],
           "indexes": [
@@ -83,12 +83,12 @@
           ],
           "uv": [
             0,
-            899,
-            736,
-            899,
+            1700,
+            750,
+            1700,
             0,
             0,
-            736,
+            750,
             0
           ],
           "nuv": [
@@ -102,18 +102,18 @@
             1
           ],
           "minPos": [
-            -368,
-            -449.5,
+            -375,
+            -850,
             0
           ],
           "maxPos": [
-            368,
-            449.5,
+            375,
+            850,
             0
           ]
         },
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "6564ee70-5441-462b-899a-2cc69b10bfad@6c48a",
+        "imageUuidOrDatabaseUri": "d2fe8f23-b279-44e2-a73d-7b28d0e9434b@6c48a",
         "atlasUuid": "",
         "trimType": "auto"
       },
@@ -127,8 +127,8 @@
   },
   "userData": {
     "type": "sprite-frame",
-    "hasAlpha": true,
+    "hasAlpha": false,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "6564ee70-5441-462b-899a-2cc69b10bfad@6c48a"
+    "redirect": "d2fe8f23-b279-44e2-a73d-7b28d0e9434b@6c48a"
   }
 }
