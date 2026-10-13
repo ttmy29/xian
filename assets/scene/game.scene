@@ -3236,7 +3236,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "TempKnife1",
+    "_name": "TempKnife3",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -3694,7 +3694,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "三箭齐发",
+    "_string": "多重射击",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 20,
@@ -4157,7 +4157,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 64,
+      "width": 84,
       "height": 54.4
     },
     "_anchorPoint": {
@@ -4187,7 +4187,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "轩辕剑",
+    "_string": "光铸圣剑",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 20,
@@ -5143,7 +5143,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 64,
+      "width": 84,
       "height": 54.4
     },
     "_anchorPoint": {
@@ -5173,7 +5173,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "珍宝箱",
+    "_string": "秘藏宝箱",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 20,
@@ -5636,7 +5636,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 64,
+      "width": 84,
       "height": 54.4
     },
     "_anchorPoint": {
@@ -5666,7 +5666,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "龙卷风",
+    "_string": "元素风暴",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 20,
@@ -6129,7 +6129,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 64,
+      "width": 84,
       "height": 54.4
     },
     "_anchorPoint": {
@@ -6159,7 +6159,7 @@
       "b": 255,
       "a": 255
     },
-    "_string": "万剑决",
+    "_string": "奥数剑阵",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 20,
@@ -6437,9 +6437,9 @@
     "_layer": 33554432,
     "_euler": {
       "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
-      "z": 180
+      "x": 180,
+      "y": 180,
+      "z": 7.016709298534876e-15
     },
     "_id": "dc8UDM3vRFbaktU0q2kWCl"
   },

@@ -1774,7 +1774,8 @@ export class BattleDemo extends Component {
             .convertToNodeSpaceAR(this.player.worldPosition);
         const node = this.acquireNode('knife1', this.radialKnifePrefab, this.knifeRoot);
         node.setPosition(origin);
-        node.angle = angle * 180 / Math.PI - 90;
+        // 预制体初始旋转对应朝上；保留新素材的 -45° 基准和 (1, 0) 锚点。
+        node.angle = angle * 180 / Math.PI - 90 + this.radialKnifePrefab.data.angle;
         const trail = new KnifeTrail(this.effectRoot, node.worldPosition);
         this.radialKnives.push({
             node, trail, directionX: Math.cos(angle), directionY: Math.sin(angle), age: 0,
