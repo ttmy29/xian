@@ -1,12 +1,14 @@
 import { Asset, assetManager, AssetManager, AudioClip, Prefab, resources } from 'cc';
-import { PREFAB_PATHS, PrefabKey } from './ResourceConfig';
+import { PREFAB_BUNDLES, PREFAB_PATHS, PrefabKey } from './ResourceConfig';
 
-/** 统一加载 resources 内的资源；同一路径的并发请求共用一次加载。 */
+/** 统一加载 resources 与独立 Bundle 的资源；同一路径的并发请求共用一次加载。 */
 export class ResourceManager {
     private static readonly tasks = new Map<string, Promise<Asset>>();
     private static readonly bundleTasks = new Map<string, Promise<AssetManager.Bundle>>();
 
     static loadPrefab(key: PrefabKey): Promise<Prefab> {
+        const bundleName = PREFAB_BUNDLES[key];
+        if (bundleName) return this.loadBundlePrefab(bundleName, PREFAB_PATHS[key]);
         return this.loadAsset(PREFAB_PATHS[key], Prefab);
     }
 

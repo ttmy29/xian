@@ -22,6 +22,11 @@ export const BATTLE_CONFIG = {
     player: {
         maxHp: 100,
     },
+    collectionProgress: { // 只控制掉落物吸收进度的显示，不参与战斗结算
+        firstPercentDrops: 1, // 第 1% 需要吸收 3 个掉落物
+        percentStep: 5, // 每增长 5%，提高后续每 1% 的掉落物需求
+        extraDropsPerStep: 1, // 每个阶段比前一阶段多需要 1 个
+    },
     knife: {
         tapCooldown: 0.5,
         icon1BaseDamage: 10,
@@ -88,14 +93,13 @@ export const BATTLE_CONFIG = {
         successScaleDuration: 0.8, // success 界面从 0 缩放到 1 的时间（秒）
         successHoldDuration: 1, // 缩放完成后保持显示的时间（秒）
     },
-    roleAdvance: { // 击破 2、3 后共用的 lei1、lei2 与角色进阶流程
+    roleAdvance: { // 击破 2、3 后的渡劫雷效；lei2 显现时分别切换 role2、role3
         lei2Radius: 400, // lei2 每次伤害以角色为圆心的半径
         lei2Damage: 300, // lei2 每次对范围内每只怪物造成的伤害
         lei2DamageDelay: 1, // lei2 开始后前 1 秒不造成伤害
         lei1OffsetY: 200, // lei1 特效相对角色向上偏移（像素）
-        skillStartDelay: 2.5, // lei1 开始后等待多久播放当前角色的 skill1（秒）
         lei2StartDelay: 1.5, // lei1 开始后等待多久启动 lei2
-        lei2VisibleDelay: 1, // lei2 开始后等待真正显现的时间；此时播放 duJie 并震屏
+        lei2VisibleDelay: 1, // lei2 开始后等待显现的时间；此时切换角色、播放 duJie 并震屏
         lei2ShakeDuration: 1.5, // lei2 显现时的震屏时长（秒）
         lei2ShakeOffset: 50, // lei2 震屏最大偏移（像素）
     },

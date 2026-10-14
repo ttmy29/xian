@@ -1,6 +1,6 @@
 import {
     _decorator, Animation, Color, Component, EventTouch, Graphics, instantiate, Label, Node,
-    Prefab, Quat, sp, Sprite, tween, Tween, UIOpacity, UITransform, Vec3,
+    Prefab, ProgressBar, Quat, sp, Sprite, tween, Tween, UIOpacity, UITransform, Vec3,
 } from 'cc';
 import { BATTLE_CONFIG, SkillTargetConfig } from './BattleConfig';
 import { AudioManager } from './AudioManager';
@@ -76,9 +76,6 @@ interface TargetSnapshot {
     position: Vec3;
 }
 
-type RoleLevel = 1 | 2 | 3;
-type UpgradeRoleLevel = 2 | 3;
-
 @ccclass('BattleDemo')
 export class BattleDemo extends Component {
     private audio!: AudioManager;
@@ -93,6 +90,8 @@ export class BattleDemo extends Component {
     private readonly skills = new Map<string, number>();
     private readonly monsterSpawner = new MonsterSpawner();
     private readonly monsterTemplates: Prefab[] = [];
+    private readonly postWarnMonsterTemplates: Prefab[] = [];
+    private postWarnMonsters = false;
     private bossPrefab: Prefab | null = null;
     private monstersReady = false;
     private pendingMonsterStart = false;
@@ -106,12 +105,14 @@ export class BattleDemo extends Component {
     private monsterRoot!: Node;
     private dropRoot!: Node;
     private player!: Node;
+    private collectionProgressBar: ProgressBar | null = null;
+    private collectionProgressLabel: Label | null = null;
+    private collectionCompletedPercent = 0;
+    private collectionRemainderDrops = 0;
     private baohuNode: Node | null = null;
     private baohuFollowsPlayer = false;
     private activeRole: Node | null = null;
-    private roleLevel: RoleLevel = 1;
-    private readonly pendingRoleAdvances = new Set<UpgradeRoleLevel>();
-    private roleAdvanceRunning = false;
+    private roleLevel = 1;
     private roleReady = false;
     private knifeRoot!: Node;
     private tempKnife1!: Node;
@@ -130,8 +131,6 @@ export class BattleDemo extends Component {
     private hitPrefab: Prefab | null = null;
     private hitPrefabLoadFailed = false;
     private readonly pendingHitEffects: Vec3[] = [];
-    private upgradePrefab: Prefab | null = null;
-    private upgradePrefabLoadFailed = false;
     private radialKnifePrefab: Prefab | null = null;
     private radialKnifePrefabLoadFailed = false;
     private orbitKnifePrefab: Prefab | null = null;
@@ -153,7 +152,6 @@ export class BattleDemo extends Component {
     private screenShakeBasePosition = new Vec3();
     private screenShakeElapsed = 0;
     private screenShakeRemaining = 0;
-    private pendingUpgradeEffects = 0;
     private readonly pendingRadialAngles: number[] = [];
     private battleUI!: Node;
     private tempLayer!: Node;
@@ -194,6 +192,15 @@ export class BattleDemo extends Component {
         }
         this.dropRoot = this.getOrCreate('dropRoot');
         this.player = this.getOrCreate('player');
+        const xiuwei = this.node.getChildByName('battleUI')?.getChildByName('xiuwei');
+        const progressRoot = xiuwei?.getChildByName('ProgressBar')
+            ?? this.node.getChildByName('progressBar')
+            ?? this.node.getChildByName('ProgressBar')
+            ?? this.node.getChildByName('battleUI')?.getChildByName('ProgressBar');
+        this.collectionProgressBar = progressRoot?.getComponent(ProgressBar)
+            ?? progressRoot?.getComponentInChildren(ProgressBar) ?? null;
+        this.collectionProgressLabel = xiuwei?.getChildByName('Label')?.getComponent(Label) ?? null;
+        this.updateCollectionProgressDisplay(0);
         for (const oldRole of [...this.player.children].filter(child => /^role[123]$/.test(child.name))) {
             oldRole.active = false;
             oldRole.destroy();
@@ -207,15 +214,9 @@ export class BattleDemo extends Component {
             this.activeRole = role1;
             this.roleReady = true;
             if (this.pendingMonsterStart && this.monstersReady) this.startMonsterSpawns();
-            void this.advanceRoleIfReady();
         }, error => {
             if (this.node.isValid) console.error('BattleDemo: 加载 role/role1 失败。', error);
         });
-        for (const level of [2, 3] as const) {
-            void ResourceManager.loadBundlePrefab('role', `role${level}`).catch(error => {
-                if (this.node.isValid) console.error(`BattleDemo: 加载 role/role${level} 失败。`, error);
-            });
-        }
         this.knifeRoot = this.getOrCreate('knifeRoot');
         this.tempKnife1 = this.getOrCreate('TempKnife1');
         this.knifeTemplate = this.knifeRoot.getChildByName('knife');
@@ -236,6 +237,13 @@ export class BattleDemo extends Component {
             if (this.pendingMonsterStart) this.startMonsterSpawns();
         }, error => {
             if (this.node.isValid) console.error('BattleDemo: 加载普通怪物预制体失败。', error);
+        });
+        void Promise.all((['monster5', 'monster6', 'monster7'] as const)
+            .map(key => ResourceManager.loadPrefab(key))).then(prefabs => {
+            if (!this.node.isValid) return;
+            this.postWarnMonsterTemplates.push(...prefabs);
+        }, error => {
+            if (this.node.isValid) console.error('BattleDemo: 加载警告后的怪物预制体失败。', error);
         });
         void ResourceManager.loadPrefab('monster4').then(prefab => {
             if (!this.node.isValid) return;
@@ -288,19 +296,6 @@ export class BattleDemo extends Component {
                 console.error('BattleDemo: 加载 prefabs/hit 失败。', error);
                 this.hitPrefabLoadFailed = true;
                 this.pendingHitEffects.length = 0;
-            }
-        });
-        void ResourceManager.loadPrefab('sxsj').then(prefab => {
-            if (!this.node.isValid) return;
-            this.upgradePrefab = prefab;
-            const pending = this.pendingUpgradeEffects;
-            this.pendingUpgradeEffects = 0;
-            for (let index = 0; index < pending; index++) this.playUpgradeEffect();
-        }, error => {
-            if (this.node.isValid) {
-                console.error('BattleDemo: 加载 prefabs/sxsj 失败。', error);
-                this.upgradePrefabLoadFailed = true;
-                this.pendingUpgradeEffects = 0;
             }
         });
         void ResourceManager.loadPrefab('knife1').then(prefab => {
@@ -400,6 +395,9 @@ export class BattleDemo extends Component {
             ? BATTLE_CONFIG.knife.icon1BaseDamage + (highestIcon1Level - 1) * BATTLE_CONFIG.knife.icon1DamagePerLevel
             : 0;
         this.playerHp = BATTLE_CONFIG.player.maxHp;
+        this.collectionCompletedPercent = 0;
+        this.collectionRemainderDrops = 0;
+        this.updateCollectionProgressDisplay(0);
         this.time = 0;
         this.tripleShotUnlocked = false;
         this.radialSkillUnlocked = false;
@@ -410,12 +408,11 @@ export class BattleDemo extends Component {
         this.fengSkillUnlocked = false;
         this.pendingFengCast = false;
         this.pendingWarn = false;
+        this.postWarnMonsters = false;
         this.orbitSpawnCount = 0;
         this.orbitSpawnTimer = 0;
         this.orbitAngle = 0;
         this.radialVolleyIndex = 0;
-        this.pendingRoleAdvances.clear();
-        this.roleAdvanceRunning = false;
         this.resultShown = false;
         this.playerDeathStarted = false;
         this.bossSpawnRequested = false;
@@ -458,6 +455,7 @@ export class BattleDemo extends Component {
                 this.updateFengs(dt);
             }
         }
+        this.sortMonsterLayers();
         this.updateTrails(dt);
     }
 
@@ -596,7 +594,9 @@ export class BattleDemo extends Component {
             .filter(target => target.alive && target.kind === 'monster')
             .map(target => this.monsterPositionInRoot(target));
         const canvasSize = this.node.getComponent(UITransform)!.contentSize;
-        const requests = this.monsterSpawner.planWave(canvasSize, this.monsterTemplates, occupied);
+        // 新组未加载完成时不出怪，警告后不再回退到 monster1～3。
+        const templates = this.postWarnMonsters ? this.postWarnMonsterTemplates : this.monsterTemplates;
+        const requests = this.monsterSpawner.planWave(canvasSize, templates, occupied);
         for (const request of requests) this.createMonster(request.template, request.x, request.y);
     }
 
@@ -606,7 +606,7 @@ export class BattleDemo extends Component {
         node.name = template.data.name;
         node.parent = this.monsterRoot;
         node.setPosition(x, Math.min(y, BATTLE_CONFIG.monster.spawnMaxY));
-        // 模板正缩放时面朝左，向右移动才镜像；始终保留模板的尺寸。
+        // 模板正缩放时面朝右，向左移动才镜像；始终保留模板的尺寸。
         const playerPosition = this.monsterRoot.getComponent(UITransform)!
             .convertToNodeSpaceAR(this.player.worldPosition);
         const attackSide: -1 | 1 = x > playerPosition.x + BATTLE_CONFIG.monster.spawnMinAbsX ? 1 : -1;
@@ -627,6 +627,7 @@ export class BattleDemo extends Component {
             isGuideMonster, isBoss, attackSide, atAttackPoint: false,
         };
         this.targets.push(target);
+        this.sortMonsterLayers();
         return target;
     }
 
@@ -644,7 +645,8 @@ export class BattleDemo extends Component {
         if (Math.abs(directionX) < 0.001) return;
         const scale = node.scale;
         const absX = Math.abs(scale.x);
-        const facingX = directionX < 0 ? absX : -absX;
+        // 怪物预制体默认朝右，向左时沿 X 轴镜像。
+        const facingX = directionX < 0 ? -absX : absX;
         if (scale.x !== facingX) node.setScale(facingX, scale.y, scale.z);
     }
 
@@ -724,6 +726,25 @@ export class BattleDemo extends Component {
         target.node.setWorldPosition(worldPosition);
     }
 
+    private sortMonsterLayers(): void {
+        for (const parent of [this.monsterRoot, this.tempLayer]) {
+            // 保留死亡动画中的怪物；同 Y 时沿用已有顺序，避免反复交换层级。
+            const monsters = this.targets
+                .filter(target => target.kind === 'monster' && target.node.isValid && target.node.parent === parent)
+                .map(target => ({ node: target.node, y: this.monsterPositionInRoot(target).y,
+                    siblingIndex: target.node.getSiblingIndex() }))
+                .sort((a, b) => b.y - a.y || a.siblingIndex - b.siblingIndex);
+            // 引导亮圈在怪物后方；TempLayer 的提示、遮罩和结算界面在怪物前方。
+            const offset = parent === this.monsterRoot && this.spotlightNode?.isValid
+                && this.spotlightNode.parent === parent ? 1 : 0;
+            if (offset) this.spotlightNode!.setSiblingIndex(0);
+            for (let index = 0; index < monsters.length; index++) {
+                const node = monsters[index].node;
+                if (node.getSiblingIndex() !== offset + index) node.setSiblingIndex(offset + index);
+            }
+        }
+    }
+
     private moveMonsterToTempLayerIfNear(target: BattleTarget, position: Vec3,
         playerPosition: Vec3): void {
         if (target.node.parent === this.tempLayer) return;
@@ -767,7 +788,7 @@ export class BattleDemo extends Component {
             this.faceMonster(target.node, playerPosition.x - destinationX);
             if (!target.atAttackPoint) {
                 target.atAttackPoint = true;
-                target.node.getComponent(sp.Skeleton)?.setAnimation(0, 'phyattack', true);
+                target.node.getComponent(sp.Skeleton)?.setAnimation(0, 'attack', true);
             }
             const interval = target.isBoss ? BATTLE_CONFIG.boss.contactInterval : BATTLE_CONFIG.monster.attackInterval;
             if (this.time - (target.lastContactTime ?? -Infinity) < interval) continue;
@@ -1085,19 +1106,26 @@ export class BattleDemo extends Component {
         if (!this.node.isValid) return;
         this.grantSceneSkill('3', skillName);
         await this.firstLeiVolley;
-        if (this.running && this.node.isValid) await this.playLei1Upgrade(3);
+        if (this.running && this.node.isValid) await this.playTribulation(3);
     }
 
     private async playTarget2BreakSequence(): Promise<void> {
-        await this.playLei1Upgrade(2);
+        await this.playTribulation(2);
     }
 
-    private async playLei1Upgrade(nextRole: UpgradeRoleLevel): Promise<void> {
-        try {
-            await ResourceManager.loadPrefab('lei2');
-        } catch (error) {
-            console.error('BattleDemo: 预加载 prefabs/lei2 失败。', error);
-        }
+    private async playTribulation(nextRole: 2 | 3): Promise<void> {
+        // 在雷效开始前备好角色，等待 lei2 显现时再与音效、震屏同步切换。
+        let nextRolePrefab: Prefab | null = null;
+        await Promise.all([
+            ResourceManager.loadPrefab('lei2').catch(error => {
+                console.error('BattleDemo: 预加载 prefabs/lei2 失败。', error);
+            }),
+            ResourceManager.loadBundlePrefab('role', `role${nextRole}`).then(prefab => {
+                nextRolePrefab = prefab;
+            }, error => {
+                console.error(`BattleDemo: 加载 role/role${nextRole} 失败。`, error);
+            }),
+        ]);
         if (!this.running || !this.node.isValid) return;
         let resolveLei2Finished: () => void = () => {};
         const lei2Finished = new Promise<void>(resolve => { resolveLei2Finished = resolve; });
@@ -1114,6 +1142,7 @@ export class BattleDemo extends Component {
                 void this.playBreakEffect('lei2', () => {
                     this.scheduleOnce(() => {
                         if (effectFinished || !this.running || !this.node.isValid) return;
+                        if (nextRolePrefab) this.switchRole(nextRole, nextRolePrefab);
                         this.audio.playEffect('duJie');
                         this.startScreenShake();
                     }, Math.max(0, BATTLE_CONFIG.roleAdvance.lei2VisibleDelay));
@@ -1128,14 +1157,28 @@ export class BattleDemo extends Component {
                     resolveLei2Finished();
                 });
             }, Math.max(0, BATTLE_CONFIG.roleAdvance.lei2StartDelay));
-            this.scheduleOnce(() => this.requestRoleAdvance(nextRole),
-                Math.max(0, BATTLE_CONFIG.roleAdvance.skillStartDelay));
         });
         if (!lei1Started) resolveLei2Finished();
         if (!this.running || !this.node.isValid) return;
         await lei2Finished;
         if (!this.running || !this.node.isValid) return;
-        if (nextRole === 2) this.showSuccess();
+        this.showSuccess();
+    }
+
+    private switchRole(nextRole: 2 | 3, prefab: Prefab): void {
+        if (!this.running || !this.node.isValid || nextRole <= this.roleLevel) return;
+        const oldRole = this.activeRole;
+        const role = instantiate(prefab);
+        role.parent = this.player;
+        role.setPosition(0, 0, 0);
+        if (oldRole?.isValid) role.setSiblingIndex(oldRole.getSiblingIndex());
+        role.active = true;
+        this.activeRole = role;
+        this.roleLevel = nextRole;
+        if (oldRole?.isValid) {
+            oldRole.active = false;
+            oldRole.destroy();
+        }
     }
 
     private async playBreakEffect(key: '3PD1' | '3PD2' | '5PD1' | 'lei1' | 'lei2',
@@ -1271,64 +1314,6 @@ export class BattleDemo extends Component {
                 (target.sceneSkillId === '1' || target.sceneSkillId === '6')))) {
             this.scheduleMonsterWaves();
         }
-    }
-
-    private requestRoleAdvance(nextRole: UpgradeRoleLevel): void {
-        if (!this.running || !this.node.isValid || this.roleLevel >= nextRole) return;
-        this.pendingRoleAdvances.add(nextRole);
-        void this.advanceRoleIfReady();
-    }
-
-    private async advanceRoleIfReady(): Promise<void> {
-        if (!this.running || !this.node.isValid || this.roleAdvanceRunning || !this.activeRole) return;
-        const nextRole = this.roleLevel + 1;
-        if (nextRole > 3 || !this.pendingRoleAdvances.has(nextRole as UpgradeRoleLevel)) return;
-        this.roleAdvanceRunning = true;
-        let advanced = false;
-        const oldRole = this.activeRole;
-        try {
-            await this.playRoleSkill1(oldRole);
-            if (!this.running || !this.node.isValid || this.activeRole !== oldRole) return;
-            const prefab = await ResourceManager.loadBundlePrefab('role', `role${nextRole}`);
-            if (!this.running || !this.node.isValid || this.activeRole !== oldRole) return;
-            oldRole.active = false;
-            oldRole.destroy();
-            const role = instantiate(prefab);
-            role.parent = this.player;
-            role.setPosition(0, 0, 0);
-            role.active = true;
-            this.activeRole = role;
-            this.roleLevel = nextRole as RoleLevel;
-            this.pendingRoleAdvances.delete(nextRole as UpgradeRoleLevel);
-            this.playUpgradeEffect();
-            if (nextRole === 3) this.showSuccess();
-            advanced = true;
-        } catch (error) {
-            if (this.node.isValid) console.error(`BattleDemo: 角色切换到 role${nextRole} 失败。`, error);
-        } finally {
-            this.roleAdvanceRunning = false;
-        }
-        if (advanced) void this.advanceRoleIfReady();
-    }
-
-    private async playRoleSkill1(roleNode: Node): Promise<void> {
-        const spineRoot = roleNode.getChildByName('spine');
-        const skeletons = spineRoot?.children
-            .map(child => child.getComponent(sp.Skeleton))
-            .filter((skeleton): skeleton is sp.Skeleton => skeleton !== null) ?? [];
-        if (skeletons.length === 0) {
-            console.error(`BattleDemo: ${roleNode.name}/spine 下没有可播放 skill1 的 Spine 组件。`);
-        }
-        await Promise.all(skeletons.map(skeleton => new Promise<void>(resolve => {
-            if (!skeleton.findAnimation('skill1')) {
-                console.error(`BattleDemo: ${roleNode.name}/spine/${skeleton.node.name} 缺少 skill1 动画。`);
-                resolve();
-                return;
-            }
-            const entry = skeleton.setAnimation(0, 'skill1', false);
-            if (entry) skeleton.setTrackCompleteListener(entry, () => resolve());
-            else resolve();
-        })));
     }
 
     private showSuccess(): void {
@@ -1473,18 +1458,6 @@ export class BattleDemo extends Component {
         }
     }
 
-    private playUpgradeEffect(): void {
-        if (this.upgradePrefabLoadFailed) return;
-        if (!this.upgradePrefab) {
-            this.pendingUpgradeEffects++;
-            return;
-        }
-        const effect = instantiate(this.upgradePrefab);
-        effect.parent = this.player;
-        effect.setPosition(0, 0);
-        void this.playOneShotSpine(effect, 'sx');
-    }
-
     private playOneShotSpine(effect: Node, animation: string,
         finish: () => void = () => effect.destroy()): Promise<void> {
         const skeleton = effect.getComponent(sp.Skeleton);
@@ -1519,6 +1492,7 @@ export class BattleDemo extends Component {
         shadeOpacity.opacity = 255;
         const warn = instantiate(this.warnPrefab);
         warn.parent = this.tempLayer;
+        this.postWarnMonsters = true;
         this.audio.playEffect('warn');
         warn.setPosition(0, 0);
         warn.setSiblingIndex(this.tempLayer.children.length - 1);
@@ -1952,8 +1926,34 @@ export class BattleDemo extends Component {
             .call(() => {
                 drop.node?.destroy();
                 this.skills.set(drop.skillId, (this.skills.get(drop.skillId) ?? 0) + 1);
+                this.addCollectionProgress();
             })
             .start();
+    }
+
+    private addCollectionProgress(): void {
+        if (this.collectionCompletedPercent >= 100) return;
+        const config = BATTLE_CONFIG.collectionProgress;
+        const first = Math.max(1, Math.floor(config.firstPercentDrops));
+        const step = Math.max(1, Math.floor(config.percentStep));
+        const extra = Math.max(0, Math.floor(config.extraDropsPerStep));
+        this.collectionRemainderDrops++;
+        let required = first + Math.floor(this.collectionCompletedPercent / step) * extra;
+        while (this.collectionCompletedPercent < 100 && this.collectionRemainderDrops >= required) {
+            this.collectionRemainderDrops -= required;
+            this.collectionCompletedPercent++;
+            required = first + Math.floor(this.collectionCompletedPercent / step) * extra;
+        }
+        // 每个掉落物都会推进当前 1% 区间，避免进度条长时间完全不动。
+        const percent = Math.min(100, this.collectionCompletedPercent + this.collectionRemainderDrops / required);
+        this.updateCollectionProgressDisplay(percent);
+    }
+
+    private updateCollectionProgressDisplay(percent: number): void {
+        if (this.collectionProgressBar?.isValid) this.collectionProgressBar.progress = percent / 100;
+        if (this.collectionProgressLabel?.isValid) {
+            this.collectionProgressLabel.string = `${this.collectionCompletedPercent}%`;
+        }
     }
 
     private removeTarget(target: BattleTarget): void {

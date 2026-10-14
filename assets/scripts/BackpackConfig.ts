@@ -1,5 +1,19 @@
 import { GridItem } from './InventoryGrid';
 
+/** 背包拖动演示：时间单位为秒，偏移单位为设计像素。 */
+export const DRAG_GUIDE_CONFIG = {
+    clickDuration: 0.85, // 现有 yindao_dianji 动画完整时长约 0.83 秒
+    holdDuration: 0.3,
+    dragDuration: 1,
+    releaseDuration: 0.3,
+    fadeDuration: 0.3,
+    repeatDelay: 0.6,
+    pointerOffsetX: 14,
+    pointerOffsetY: 2,
+    curveOffsetX: 45,
+    ghostOpacity: 150,
+};
+
 export interface BackpackItemConfig extends GridItem {
     /** Node/items 下作为模板的节点名称。 */
     templateName: string;
