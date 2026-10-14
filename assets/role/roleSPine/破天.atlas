@@ -1,0 +1,139 @@
+
+破天.png
+size: 832, 1719
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+Weapon1
+  rotate: true
+  xy: 241, 1125
+  size: 206, 174
+  orig: 208, 176
+  offset: 1, 1
+  index: -1
+上半身
+  rotate: true
+  xy: 404, 729
+  size: 359, 375
+  orig: 359, 375
+  offset: 0, 0
+  index: -1
+中裙
+  rotate: false
+  xy: 419, 1125
+  size: 134, 194
+  orig: 134, 194
+  offset: 0, 0
+  index: -1
+右上臂
+  rotate: false
+  xy: 221, 1397
+  size: 154, 139
+  orig: 156, 141
+  offset: 1, 1
+  index: -1
+右下臂
+  rotate: true
+  xy: 612, 1397
+  size: 119, 132
+  orig: 121, 134
+  offset: 1, 1
+  index: -1
+右吊坠
+  rotate: true
+  xy: 711, 1548
+  size: 60, 80
+  orig: 60, 80
+  offset: 0, 0
+  index: -1
+右拳
+  rotate: true
+  xy: 616, 1548
+  size: 92, 91
+  orig: 94, 93
+  offset: 1, 1
+  index: -1
+右腿
+  rotate: false
+  xy: 2, 1125
+  size: 235, 268
+  orig: 235, 268
+  offset: 0, 0
+  index: -1
+右裙
+  rotate: true
+  xy: 557, 1125
+  size: 185, 146
+  orig: 185, 146
+  offset: 0, 0
+  index: -1
+头
+  rotate: false
+  xy: 391, 2
+  size: 401, 451
+  orig: 403, 453
+  offset: 1, 1
+  index: -1
+头发后
+  rotate: false
+  xy: 2, 729
+  size: 398, 392
+  orig: 398, 392
+  offset: 0, 0
+  index: -1
+左吊坠
+  rotate: false
+  xy: 2, 1663
+  size: 52, 54
+  orig: 52, 54
+  offset: 0, 0
+  index: -1
+左腿
+  rotate: true
+  xy: 2, 1397
+  size: 147, 215
+  orig: 147, 215
+  offset: 0, 0
+  index: -1
+左臂上
+  rotate: true
+  xy: 460, 1548
+  size: 106, 152
+  orig: 108, 154
+  offset: 1, 1
+  index: -1
+左臂下
+  rotate: true
+  xy: 707, 1125
+  size: 164, 103
+  orig: 164, 103
+  offset: 0, 0
+  index: -1
+左裙
+  rotate: false
+  xy: 2, 1548
+  size: 95, 111
+  orig: 98, 119
+  offset: 1, 7
+  index: -1
+影子
+  rotate: false
+  xy: 101, 1548
+  size: 355, 108
+  orig: 365, 119
+  offset: 4, 6
+  index: -1
+披风
+  rotate: true
+  xy: 2, 2
+  size: 723, 385
+  orig: 723, 385
+  offset: 0, 0
+  index: -1
+肩甲
+  rotate: false
+  xy: 379, 1397
+  size: 229, 120
+  orig: 231, 122
+  offset: 1, 1
+  index: -1

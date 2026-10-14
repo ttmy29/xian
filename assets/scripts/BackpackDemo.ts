@@ -1,8 +1,8 @@
 import {
     _decorator, Button, Color, Component, EventTouch, Graphics, instantiate, Label, Node,
-    sp, Sprite, Tween, tween, UITransform, Vec2, Vec3,
+    sp, Sprite, Tween, tween, UIOpacity, UITransform, Vec2, Vec3,
 } from 'cc';
-import { BACKPACK_CONFIG, BackpackItemConfig } from './BackpackConfig';
+import { BACKPACK_CONFIG, BackpackItemConfig, DRAG_GUIDE_CONFIG } from './BackpackConfig';
 import { AudioManager } from './AudioManager';
 import { BattleDemo } from './BattleDemo';
 import { GridItem, GridPosition, InventoryGrid } from './InventoryGrid';
@@ -52,15 +52,21 @@ export class BackpackDemo extends Component {
     private dragging: DraggableItem | null = null;
     private candidate: GridPosition | null = null;
     private mergeTarget: DraggableItem | null = null;
+    private dragGuideRoot: Node | null = null;
+    private dragGuidePointer: Node | null = null;
+    private dragGuideGhost: Node | null = null;
+    private dragGuideItem: DraggableItem | null = null;
+    private dragGuideTime = 0;
+    private dragGuideStartedMoving = false;
+    private dragGuideStart = new Vec3();
+    private dragGuideEnd = new Vec3();
 
     onLoad(): void {
         AudioManager.getOrCreate(this.node).startBgm();
         void ResourceManager.preloadPrefabs(BATTLE_PREFABS).catch(error =>
             console.error('BackpackDemo: 预加载战斗资源失败。', error));
-        void Promise.all([
-            ResourceManager.loadBundlePrefab('role', 'role1'),
-            ResourceManager.loadBundlePrefab('role', 'role2'),
-        ]).catch(error => console.error('BackpackDemo: 预加载角色资源失败。', error));
+        void Promise.all(['role1', 'role2', 'role3'].map(name => ResourceManager.loadBundlePrefab('role', name)))
+            .catch(error => console.error('BackpackDemo: 预加载角色资源失败。', error));
         const content = this.node.getChildByName('Node');
         const background = content?.getChildByName('bgNode');
         const templates = content?.getChildByName('items');
@@ -89,6 +95,7 @@ export class BackpackDemo extends Component {
         this.drawGrid();
         this.createPreview();
         this.createBatch(false);
+        void this.createDragGuide(content!);
         const refreshNode = content?.getChildByName('Buttons')?.getChildByName('refresh');
         if (refreshNode?.getComponent(Button)) {
             this.refreshButtonNode = refreshNode;
@@ -97,9 +104,124 @@ export class BackpackDemo extends Component {
     }
 
     onDestroy(): void {
+        this.stopDragGuide();
         this.unschedule(this.advanceCountdown);
         const countdownNode = this.countdownLabel?.node;
         if (countdownNode?.isValid) Tween.stopAllByTarget(countdownNode);
+    }
+
+    private async createDragGuide(content: Node): Promise<void> {
+        try {
+            const prefab = await ResourceManager.loadPrefab('yindao');
+            if (!this.node.isValid || !content.isValid || this.countdownStarted) return;
+            const root = new Node('dragGuide');
+            root.layer = content.layer;
+            root.parent = content;
+            root.addComponent(UITransform);
+            root.addComponent(UIOpacity);
+            this.dragGuideRoot = root;
+            const pointer = instantiate(prefab);
+            pointer.parent = root;
+            pointer.layer = content.layer;
+            this.dragGuidePointer = pointer;
+            this.restartDragGuide();
+        } catch (error) {
+            if (this.node.isValid) console.error('BackpackDemo: 加载拖动引导失败。', error);
+        }
+    }
+
+    private stopDragGuide(): void {
+        if (this.dragGuideRoot?.isValid) this.dragGuideRoot.active = false;
+        this.dragGuideItem = null;
+        if (this.dragGuideGhost?.isValid) {
+            this.dragGuideGhost.active = false;
+            this.dragGuideGhost.destroy();
+        }
+        this.dragGuideGhost = null;
+    }
+
+    private restartDragGuide(): void {
+        this.stopDragGuide();
+        const root = this.dragGuideRoot;
+        if (!root?.isValid || !this.dragGuidePointer || this.countdownStarted || this.dragging) return;
+        const item = this.items.find(candidate => candidate.kind === 'icon1'
+            && candidate.node.isValid && candidate.node.parent === candidate.homeParent);
+        if (!item || !this.gridRoot) return;
+        this.dragGuideItem = item;
+        this.dragGuideTime = 0;
+        this.dragGuideStartedMoving = false;
+        const ghost = instantiate(item.node);
+        ghost.name = 'guideIcon1';
+        ghost.parent = root;
+        ghost.setSiblingIndex(0);
+        // 保留物品的世界缩放，演示副本不注册拖动事件，也不加入背包数据。
+        ghost.setWorldScale(item.node.worldScale);
+        ghost.setWorldRotation(item.node.worldRotation);
+        (ghost.getComponent(UIOpacity) ?? ghost.addComponent(UIOpacity)).opacity = DRAG_GUIDE_CONFIG.ghostOpacity;
+        ghost.active = false;
+        this.dragGuideGhost = ghost;
+        root.active = true;
+        root.setSiblingIndex(root.parent!.children.length - 1);
+        root.getComponent(UIOpacity)!.opacity = 255;
+        const skeleton = this.dragGuidePointer.getComponent(sp.Skeleton);
+        if (skeleton?.findAnimation('yindao_dianji')) {
+            skeleton.timeScale = 1;
+            skeleton.setAnimation(0, 'yindao_dianji', false);
+        }
+        this.updateDragGuide(0);
+    }
+
+    update(dt: number): void {
+        this.updateDragGuide(dt);
+    }
+
+    private updateDragGuide(dt: number): void {
+        const root = this.dragGuideRoot;
+        const pointer = this.dragGuidePointer;
+        const item = this.dragGuideItem;
+        if (!root?.active || !pointer || !item || !this.gridRoot) return;
+        if (this.countdownStarted || this.dragging || !item.node.isValid
+            || item.node.parent !== item.homeParent) {
+            this.stopDragGuide();
+            return;
+        }
+        const config = DRAG_GUIDE_CONFIG;
+        const moveStart = config.clickDuration + config.holdDuration;
+        const fadeStart = moveStart + config.dragDuration + config.releaseDuration;
+        const cycleEnd = fadeStart + config.fadeDuration + config.repeatDelay;
+        this.dragGuideTime += dt;
+        if (this.dragGuideTime >= cycleEnd) {
+            this.restartDragGuide();
+            return;
+        }
+        const transform = root.getComponent(UITransform)!;
+        if (!this.dragGuideStartedMoving) {
+            this.dragGuideStart = transform.convertToNodeSpaceAR(item.node.worldPosition);
+            const center = this.cellCenterInGrid(item, Math.floor(GRID_COLUMNS / 2), Math.floor(GRID_ROWS / 2));
+            const worldCenter = this.gridRoot.getComponent(UITransform)!.convertToWorldSpaceAR(center);
+            this.dragGuideEnd = transform.convertToNodeSpaceAR(worldCenter);
+        }
+        if (this.dragGuideTime >= config.clickDuration) {
+            const skeleton = pointer.getComponent(sp.Skeleton);
+            if (skeleton) skeleton.timeScale = 0;
+        }
+        this.dragGuideStartedMoving = this.dragGuideTime >= moveStart;
+        const t = Math.min(1, Math.max(0, (this.dragGuideTime - moveStart) / config.dragDuration));
+        const eased = t * t * (3 - 2 * t);
+        const start = this.dragGuideStart;
+        const end = this.dragGuideEnd;
+        const controlX = (start.x + end.x) / 2 + config.curveOffsetX;
+        const controlY = (start.y + end.y) / 2;
+        const inverse = 1 - eased;
+        const x = inverse * inverse * start.x + 2 * inverse * eased * controlX + eased * eased * end.x;
+        const y = inverse * inverse * start.y + 2 * inverse * eased * controlY + eased * eased * end.y;
+        pointer.setPosition(x + config.pointerOffsetX, y + config.pointerOffsetY, 0);
+        if (this.dragGuideGhost) {
+            this.dragGuideGhost.active = this.dragGuideStartedMoving;
+            this.dragGuideGhost.setPosition(x, y, 0);
+        }
+        root.getComponent(UIOpacity)!.opacity = 255 * (1 - Math.min(1,
+            Math.max(0, (this.dragGuideTime - fadeStart) / config.fadeDuration)));
     }
 
     private drawBackground(background: Node): void {
@@ -220,6 +342,7 @@ export class BackpackDemo extends Component {
     }
 
     private startDrag(item: DraggableItem, event: EventTouch): void {
+        this.stopDragGuide();
         const audio = AudioManager.getOrCreate(this.node);
         audio.startBgm();
         audio.playEffect('Click');
@@ -269,6 +392,7 @@ export class BackpackDemo extends Component {
         if (this.items.every(current => current.node.parent !== current.homeParent)) {
             this.createBatch(true);
         }
+        this.restartDragGuide();
     }
 
     private mergeItems(source: DraggableItem, target: DraggableItem): void {
@@ -299,6 +423,7 @@ export class BackpackDemo extends Component {
     private startCountdown(): void {
         if (this.countdownStarted || !this.countdownNode || !this.countdownLabel) return;
         this.countdownStarted = true;
+        this.stopDragGuide();
         this.countdownValue = 3;
         this.countdownNode.active = true;
         this.showCountdownNumber();
@@ -424,6 +549,7 @@ export class BackpackDemo extends Component {
     /** 刷新按钮调用：只替换下方物品，格子里已放置的物品保留。 */
     public refreshItems(): void {
         if (this.dragging || !this.templatesRoot) return;
+        this.stopDragGuide();
         AudioManager.getOrCreate(this.node).playEffect('Click');
         this.preview?.clear();
         this.candidate = null;
@@ -437,6 +563,7 @@ export class BackpackDemo extends Component {
             this.items.splice(index, 1);
         }
         this.createBatch(true);
+        this.restartDragGuide();
     }
 
     /** 兼容之前可能已绑定到按钮的旧方法名。 */

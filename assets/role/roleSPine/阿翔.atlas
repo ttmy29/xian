@@ -1,0 +1,139 @@
+
+阿翔.png
+size: 1344, 1123
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+Weapon1
+  rotate: true
+  xy: 2, 793
+  size: 206, 174
+  orig: 208, 176
+  offset: 1, 1
+  index: -1
+上半身
+  rotate: false
+  xy: 1142, 478
+  size: 165, 263
+  orig: 165, 263
+  offset: 0, 0
+  index: -1
+右手
+  rotate: false
+  xy: 420, 793
+  size: 131, 179
+  orig: 131, 179
+  offset: 0, 0
+  index: -1
+右白裙
+  rotate: true
+  xy: 299, 478
+  size: 288, 231
+  orig: 288, 231
+  offset: 0, 0
+  index: -1
+右腿
+  rotate: true
+  xy: 990, 793
+  size: 129, 248
+  orig: 129, 248
+  offset: 0, 0
+  index: -1
+头发右
+  rotate: false
+  xy: 2, 478
+  size: 293, 311
+  orig: 293, 311
+  offset: 0, 0
+  index: -1
+头发左
+  rotate: true
+  xy: 555, 793
+  size: 169, 287
+  orig: 169, 290
+  offset: 0, 3
+  index: -1
+头发底
+  rotate: false
+  xy: 787, 2
+  size: 373, 420
+  orig: 373, 420
+  offset: 0, 0
+  index: -1
+头脸
+  rotate: true
+  xy: 2, 2
+  size: 472, 538
+  orig: 472, 538
+  offset: 0, 0
+  index: -1
+左手臂
+  rotate: false
+  xy: 846, 793
+  size: 140, 149
+  orig: 140, 149
+  offset: 0, 0
+  index: -1
+左白裙
+  rotate: true
+  xy: 180, 793
+  size: 195, 236
+  orig: 195, 236
+  offset: 0, 0
+  index: -1
+左腿
+  rotate: true
+  xy: 572, 1003
+  size: 97, 220
+  orig: 97, 220
+  offset: 0, 0
+  index: -1
+影子
+  rotate: false
+  xy: 213, 1003
+  size: 355, 108
+  orig: 365, 119
+  offset: 4, 6
+  index: -1
+肩甲
+  rotate: false
+  xy: 796, 1003
+  size: 120, 87
+  orig: 122, 89
+  offset: 1, 1
+  index: -1
+蓝飘右
+  rotate: true
+  xy: 896, 478
+  size: 283, 242
+  orig: 283, 242
+  offset: 0, 0
+  index: -1
+蓝飘左
+  rotate: true
+  xy: 920, 1003
+  size: 77, 236
+  orig: 77, 236
+  offset: 0, 0
+  index: -1
+裙子中
+  rotate: true
+  xy: 2, 1003
+  size: 118, 207
+  orig: 118, 207
+  offset: 0, 0
+  index: -1
+裙子底
+  rotate: true
+  xy: 544, 2
+  size: 422, 239
+  orig: 422, 239
+  offset: 0, 0
+  index: -1
+马尾
+  rotate: true
+  xy: 534, 478
+  size: 287, 358
+  orig: 287, 358
+  offset: 0, 0
+  index: -1

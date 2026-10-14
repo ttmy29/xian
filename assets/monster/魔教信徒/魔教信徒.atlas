@@ -1,0 +1,76 @@
+
+魔教信徒.png
+size: 245, 79
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+images/shadow
+  rotate: false
+  xy: 83, 32
+  size: 88, 45
+  orig: 91, 47
+  offset: 1, 1
+  index: -1
+魔教信徒/魔教信徒上身
+  rotate: true
+  xy: 173, 36
+  size: 41, 49
+  orig: 41, 49
+  offset: 0, 0
+  index: -1
+魔教信徒/魔教信徒前摆
+  rotate: false
+  xy: 224, 47
+  size: 19, 30
+  orig: 19, 30
+  offset: 0, 0
+  index: -1
+魔教信徒/魔教信徒右上臂
+  rotate: true
+  xy: 225, 29
+  size: 16, 17
+  orig: 17, 18
+  offset: 0, 1
+  index: -1
+魔教信徒/魔教信徒右小臂
+  rotate: true
+  xy: 83, 7
+  size: 23, 44
+  orig: 23, 44
+  offset: 0, 0
+  index: -1
+魔教信徒/魔教信徒右腿
+  rotate: true
+  xy: 129, 5
+  size: 25, 35
+  orig: 25, 35
+  offset: 0, 0
+  index: -1
+魔教信徒/魔教信徒头
+  rotate: true
+  xy: 2, 5
+  size: 72, 79
+  orig: 73, 80
+  offset: 0, 1
+  index: -1
+魔教信徒/魔教信徒左大臂
+  rotate: false
+  xy: 225, 10
+  size: 14, 17
+  orig: 15, 18
+  offset: 0, 1
+  index: -1
+魔教信徒/魔教信徒左小臂
+  rotate: true
+  xy: 166, 8
+  size: 22, 36
+  orig: 22, 36
+  offset: 0, 0
+  index: -1
+魔教信徒/魔教信徒左腿
+  rotate: false
+  xy: 204, 2
+  size: 19, 32
+  orig: 19, 32
+  offset: 0, 0
+  index: -1

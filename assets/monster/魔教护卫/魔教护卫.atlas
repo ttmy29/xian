@@ -1,0 +1,55 @@
+
+魔教护卫.png
+size: 346, 121
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+shadow
+  rotate: true
+  xy: 222, 31
+  size: 88, 45
+  orig: 91, 47
+  offset: 1, 1
+  index: -1
+左腿
+  rotate: true
+  xy: 222, 2
+  size: 27, 30
+  orig: 27, 30
+  offset: 0, 0
+  index: -1
+魔教护卫右手
+  rotate: false
+  xy: 2, 13
+  size: 60, 106
+  orig: 60, 106
+  offset: 0, 0
+  index: -1
+魔教护卫头
+  rotate: true
+  xy: 269, 57
+  size: 62, 75
+  orig: 63, 76
+  offset: 0, 1
+  index: -1
+魔教护卫左手
+  rotate: false
+  xy: 64, 15
+  size: 63, 104
+  orig: 63, 104
+  offset: 0, 0
+  index: -1
+魔教护卫腰带
+  rotate: false
+  xy: 269, 2
+  size: 65, 53
+  orig: 66, 54
+  offset: 0, 1
+  index: -1
+魔教护卫身体
+  rotate: true
+  xy: 129, 20
+  size: 99, 91
+  orig: 101, 93
+  offset: 1, 1
+  index: -1

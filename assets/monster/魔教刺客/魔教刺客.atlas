@@ -1,0 +1,62 @@
+
+魔教刺客.png
+size: 204, 87
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+images/shadow
+  rotate: false
+  xy: 71, 40
+  size: 88, 45
+  orig: 91, 47
+  offset: 1, 1
+  index: -1
+魔教刺客/魔教刺客前摆
+  rotate: true
+  xy: 34, 4
+  size: 16, 25
+  orig: 16, 25
+  offset: 0, 0
+  index: -1
+魔教刺客/魔教刺客右手
+  rotate: false
+  xy: 71, 2
+  size: 40, 36
+  orig: 40, 36
+  offset: 0, 0
+  index: -1
+魔教刺客/魔教刺客右腿
+  rotate: true
+  xy: 156, 15
+  size: 21, 36
+  orig: 21, 36
+  offset: 0, 0
+  index: -1
+魔教刺客/魔教刺客头
+  rotate: false
+  xy: 2, 22
+  size: 67, 63
+  orig: 68, 64
+  offset: 0, 1
+  index: -1
+魔教刺客/魔教刺客左手
+  rotate: false
+  xy: 113, 4
+  size: 41, 34
+  orig: 41, 34
+  offset: 0, 0
+  index: -1
+魔教刺客/魔教刺客左腿
+  rotate: true
+  xy: 2, 4
+  size: 16, 30
+  orig: 16, 30
+  offset: 0, 0
+  index: -1
+魔教刺客/魔教刺客身体
+  rotate: false
+  xy: 161, 38
+  size: 41, 47
+  orig: 41, 47
+  offset: 0, 0
+  index: -1
